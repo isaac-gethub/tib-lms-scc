@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIB Systems — SCC Programme</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f4f6f9;color:#222;min-height:100vh}
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1F3864 0%,#1F7A8C 100%)}
+  .login-box{background:#fff;border-radius:10px;padding:40px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+  .login-logo{text-align:center;margin-bottom:24px}
+  .login-logo h1{font-size:22px;color:#1F3864;font-weight:800;letter-spacing:1px}
+  .login-logo p{font-size:13px;color:#1F7A8C;margin-top:4px}
+  .login-tabs{display:flex;border-bottom:2px solid #e0e6ef;margin-bottom:24px}
+  .login-tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+  .login-tab.active{color:#1F3864;border-bottom-color:#1F3864}
+  .login-panel{display:none}.login-panel.active{display:block}
+  .login-field{margin-bottom:16px}
+  .login-field label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .login-field input{width:100%;padding:11px 14px;border:1.5px solid #d0d8e8;border-radius:6px;font-size:16px;transition:border .2s;outline:none}
+  .login-field input:focus{border-color:#1F7A8C}
+  .login-btn{width:100%;padding:13px;background:#1F3864;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:background .2s}
+  .login-btn:hover{background:#1F7A8C}
+  .login-msg{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:13px;display:none}
+  .login-msg.error{background:#fdeaea;color:#c0392b;display:block}
+  .login-msg.success{background:#eafaf1;color:#1a7a4a;display:block}
+  .login-badges{display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+  .login-badge{background:#EEF3FA;color:#1F3864;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;letter-spacing:.3px}
+
+  /* ── MAIN APP ── */
+  #main-app{display:none;min-height:100vh;flex-direction:column}
+  
+  /* Top bar */
+  .topbar{background:#1F3864;color:#fff;display:flex;align-items:center;padding:0 20px;height:54px;position:sticky;top:0;z-index:100;gap:12px}
+  .home-btn{
+    background:#1F7A8C;
+    border:none;
+    border-radius:6px;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    flex-shrink:0;
+    transition:background .2s, transform .15s;
+    padding:0;
+  }
+  .home-btn:hover{background:#C65911;transform:scale(1.08)}
+  .home-btn svg{display:block}
+    .hamburger{background:none;border:none;cursor:pointer;padding:6px;display:none;flex-direction:column;gap:5px}
+  .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .3s}
+  .topbar-title{font-size:16px;font-weight:800;letter-spacing:.5px;flex:1}
+  .topbar-user{font-size:12px;color:#a0bcd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .topbar-logout{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:background .2s;white-space:nowrap}
+  .topbar-logout:hover{background:rgba(255,255,255,.1)}
+
+  /* Watermark */
+  .watermark-bar{background:#C65911;color:#fff;text-align:center;font-size:11px;font-weight:700;padding:4px;letter-spacing:1px}
+
+  /* Layout */
+  .app-body{display:flex;flex:1;min-height:calc(100vh - 54px - 26px)}
+
+  /* Sidebar */
+  #sidebar{width:260px;min-width:260px;background:#1F3864;color:#fff;overflow-y:auto;transition:transform .3s;flex-shrink:0}
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+  .sidebar-header{padding:18px 16px 10px;font-size:11px;font-weight:700;color:#7aa3cc;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .domain-item{cursor:pointer;padding:14px 16px;border-left:3px solid transparent;transition:all .15s;user-select:none}
+  .domain-item:hover{background:rgba(255,255,255,.07);border-left-color:#1F7A8C}
+  .domain-item.active{background:rgba(31,122,140,.25);border-left-color:#1F7A8C}
+  .domain-item .domain-code{font-size:11px;font-weight:700;color:#1F7A8C;text-transform:uppercase;letter-spacing:1px}
+  .domain-item .domain-name{font-size:13px;color:#d8e8f5;margin-top:2px;line-height:1.3}
+  .domain-item .domain-count{font-size:11px;color:#7aa3cc;margin-top:2px}
+  .proc-list{background:rgba(0,0,0,.15);display:none}
+  .proc-list.open{display:block}
+  .proc-item{padding:9px 16px 9px 28px;font-size:11.5px;color:#a8c8e8;cursor:pointer;transition:background .15s;border-left:3px solid transparent;line-height:1.45;white-space:normal}
+  .proc-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .proc-item.active{background:rgba(31,122,140,.3);color:#fff;border-left-color:#C65911}
+
+  /* Resource Library in sidebar */
+  .resource-section{border-top:1px solid rgba(255,255,255,.1);margin-top:8px}
+  .resource-header{padding:14px 16px;font-size:11px;font-weight:700;color:#C65911;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+  .resource-item{padding:10px 16px 10px 28px;font-size:12px;color:#a8c8e8;cursor:pointer;transition:background .15s}
+  .resource-item:hover{background:rgba(255,255,255,.06);color:#fff}
+
+  /* Content area */
+  #content-area{flex:1;padding:28px 32px;overflow-y:auto;background:#f4f6f9}
+  .welcome-card{background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:700px}
+  .welcome-card h2{font-size:22px;color:#1F3864;margin-bottom:12px}
+  .welcome-card p{color:#555;line-height:1.7;margin-bottom:10px;font-size:14px}
+  .pathway-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:20px}
+  .pathway-card{background:#EEF3FA;border-radius:6px;padding:14px;border-left:4px solid #1F7A8C}
+  .pathway-card .pc-code{font-size:11px;font-weight:700;color:#1F7A8C;text-transform:uppercase;letter-spacing:1px}
+  .pathway-card .pc-name{font-size:13px;color:#1F3864;font-weight:600;margin-top:4px}
+  .pathway-card .pc-count{font-size:12px;color:#888;margin-top:2px}
+
+  /* Procedure content */
+  .proc-header{background:#fff;border-radius:8px 8px 0 0;padding:20px 24px;border-bottom:2px solid #1F7A8C;margin-bottom:0}
+  .proc-header h2{font-size:18px;color:#1F3864;font-weight:800}
+  .proc-header .proc-meta{font-size:12px;color:#1F7A8C;margin-top:4px;font-weight:600}
+  .proc-content-box{background:#fff;border-radius:0 0 8px 8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px}
+  .proc-doc-render{font-size:14px;line-height:1.7;color:#333}
+  .proc-doc-render h1,.proc-doc-render h2,.proc-doc-render h3{color:#1F3864;margin:16px 0 8px;font-weight:700}
+  .proc-doc-render p{margin-bottom:10px}
+  .proc-doc-render table{width:100%;border-collapse:collapse;margin:12px 0}
+  .proc-doc-render td,.proc-doc-render th{border:1px solid #d0d8e8;padding:8px 10px;font-size:13px}
+  .proc-doc-render th{background:#EEF3FA;font-weight:700;color:#1F3864}
+  .proc-doc-render ul,.proc-doc-render ol{padding-left:20px;margin-bottom:10px}
+  .proc-doc-render li{margin-bottom:4px}
+  .loading-spinner{text-align:center;padding:40px;color:#888}
+  .loading-spinner .spinner{width:36px;height:36px;border:3px solid #e0e6ef;border-top-color:#1F7A8C;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-box{background:#fdeaea;border-left:4px solid #e74c3c;padding:16px;border-radius:4px;color:#c0392b;font-size:13px}
+
+  /* Resource viewer */
+  .resource-card{background:#fff;border-radius:8px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:720px}
+  .resource-card h2{font-size:18px;color:#1F3864;margin-bottom:8px}
+  .resource-card p{color:#555;font-size:14px;line-height:1.6;margin-bottom:14px}
+  .resource-download-btn{display:inline-block;background:#1F7A8C;color:#fff;padding:10px 20px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;border:none;margin-top:8px;transition:background .2s}
+  .resource-download-btn:hover{background:#1F3864}
+
+  /* Mobile */
+  @media(max-width:768px){
+    .home-btn{
+    background:#1F7A8C;
+    border:none;
+    border-radius:6px;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    flex-shrink:0;
+    transition:background .2s, transform .15s;
+    padding:0;
+  }
+  .home-btn:hover{background:#C65911;transform:scale(1.08)}
+  .home-btn svg{display:block}
+    .hamburger{display:flex}
+    #sidebar{position:fixed;left:0;top:54px;bottom:0;z-index:95;transform:translateX(-100%)}
+    #sidebar.open{transform:translateX(0)}
+    #sidebar-overlay.open{display:block}
+    #content-area{padding:16px}
+    .topbar-user{display:none}
+    .welcome-card,.resource-card{padding:20px}
+  }
+  @media(max-width:480px){
+    .login-box{padding:24px 18px;margin:16px}
+    .pathway-grid{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>TIB SYSTEMS INC.</h1>
+      <p>Senior Controls Consultant Programme</p>
+    </div>
+    <div class="login-badges">
+      <span class="login-badge">7 SCC Domains</span>
+      <span class="login-badge">SAP Controls Audit</span>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchTab('signin')">Sign In</div>
+      <div class="login-tab" onclick="switchTab('register')">New Student</div>
+    </div>
+    <div id="tab-signin" class="login-panel active">
+      <div class="login-field"><label>Email</label><input type="email" id="si-email" placeholder="your@email.com"></div>
+      <div class="login-field"><label>Password</label><input type="password" id="si-pass" placeholder="Password"></div>
+      <button class="login-btn" onclick="doSignIn()">Sign In</button>
+      <div id="si-msg" class="login-msg"></div>
+    </div>
+    <div id="tab-register" class="login-panel">
+      <div class="login-field"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your full name"></div>
+      <div class="login-field"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
+      <div class="login-field"><label>Password</label><input type="password" id="reg-pass" placeholder="Create password (min 8 chars)"></div>
+      <button class="login-btn" onclick="doRegister()">Create Account</button>
+      <div id="reg-msg" class="login-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="main-app">
+  <div class="topbar">
+    <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="home-btn" onclick="showWelcome();closeSidebar();" title="Return to Home">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </button>
+    <div class="topbar-title" id="topbar-title-scc">TIB SCC Programme</div>
+    <div class="topbar-user" id="topbar-user"></div>
+    <button class="topbar-logout" onclick="doSignOut()">Sign Out</button>
+  </div>
+  <div class="watermark-bar" id="watermark-bar">TIB SYSTEMS — LICENSED CONTENT</div>
+  <div class="app-body">
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <nav id="sidebar">
+      <div class="sidebar-header">SCC Domains</div>
+      <div id="domain-list"></div>
+      <div class="resource-section">
+        <div class="resource-header" onclick="showResources()">&#128194; Resource Library</div>
+        <div id="resource-links"></div>
+      </div>
+    </nav>
+    <main id="content-area">
+      <div id="content-inner"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ───────────────────────────────────────────────────────────────
+const _supa = supabase.createClient(
+  'https://blfgwysgekfqhcafofhe.supabase.co',
+  'sb_publishable_ThLetpd4hj49fjce-kXoFA_v4ghwIqV'
+);
+
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const COURSE = 'scc';
+const B2_BASE = 'https://f005.backblazeb2.com/file/kabo-training-docs/scc-cl-docs';
+const LMS_URL = 'https://scc.tib-systems.com';
+
+const DOMAINS = [
+  { code:'A', name:'Access Controls & Segregation of Duties', procs:10 },
+  { code:'C', name:'GRC Configuration Controls', procs:10 },
+  { code:'D', name:'RFC & Interface Controls', procs:10 },
+  { code:'E', name:'Infrastructure & OS Security Controls', procs:10 },
+  { code:'F', name:'Fiori & UI5 Security Controls', procs:10 },
+  { code:'G', name:'BTP & Cloud Platform Controls', procs:10 },
+  { code:'J', name:'Identity & Access Governance Controls', procs:10 },
+];
+
+const RESOURCES = [
+  { label:'Doc 1 — SAP Theory Library (60 Modules)', file:'doc1-theory-library.pdf', desc:'Complete 60-module SAP Controls theory and reference library.' },
+  { label:'Doc 3 — SCC 30-Day Field Playbook', file:'doc3-scc-playbook.pdf', desc:'Your structured 30-day engagement roadmap as a Senior Controls Consultant.' },
+  { label:'Episode Study Pack', file:'episode-study-pack.pdf', desc:'25 annotated SAP screenshot study guides — one per LiveDemo episode.' },
+];
+
+const PROC_NAMES = {'A01': 'Role Design Review', 'A02': 'SoD Conflict Identification', 'A03': 'User Master Record Review', 'A04': 'Auth Object Level Testing', 'A05': 'EAM Firefighter Log Review', 'A06': 'Privileged Access Review', 'A07': 'Role Ownership Recertification', 'A08': 'Provisioning & Deprovisioning', 'A09': 'GRC Configuration Review', 'A10': 'Period End Access Controls', 'C01': 'GRC Connector Configuration', 'C02': 'Ruleset Currency Review', 'C03': 'Risk Analysis Scope', 'C04': 'Workflow Configuration', 'C05': 'MSMP Routing Rules', 'C06': 'BRM Mass Generation', 'C07': 'Access Request Form', 'C08': 'EAM Configuration', 'C09': 'UAR Campaign Configuration', 'C10': 'GRC Reporting', 'D01': 'RFC Destination Inventory', 'D02': 'Trusted RFC Mapping', 'D03': 'RFC User Account Review', 'D04': 'RFC Stored Credentials', 'D05': 'RFC Auth Objects', 'D06': 'Interface Landscape', 'D07': 'IDOC Partner Profile Review', 'D08': 'Middleware Security', 'D09': 'File Interface Controls', 'D10': 'RFC Callback & RFM Review', 'E01': 'OS Level User Access', 'E02': 'Database User Review', 'E03': 'SAP Profile Parameter Review', 'E04': 'Network Topology Review', 'E05': 'SAP Router & Message Server', 'E06': 'ABAP/Java Stack Hardening', 'E07': 'ICM HTTPS Enforcement', 'E08': 'Encryption in Transit', 'E09': 'Encryption at Rest', 'E10': 'Vulnerability Assessment', 'F01': 'Fiori Launchpad Access', 'F02': 'OData Service Exposure', 'F03': 'SICF Service Activation', 'F04': 'FES/BES Alignment', 'F05': 'Web Dispatcher Config', 'F06': 'Fiori Auth Concept', 'F07': 'Mobile Device Controls', 'F08': 'Session Management', 'F09': 'Fiori SoD Exposure', 'F10': 'Custom Fiori App Security', 'G01': 'BTP Global Account Structure', 'G02': 'IAM / IAS/IPS Configuration', 'G03': 'Trust & SAML Configuration', 'G04': 'Role Collection Assignment', 'G05': 'BTP Service Instance Security', 'G06': 'Integration Suite iFlow Security', 'G07': 'Extension Suite App Authorisation', 'G08': 'API Management & OAuth', 'G09': 'BTP Audit Log Service', 'G10': 'BTP Connectivity & Cloud Connector', 'J01': 'Identity Lifecycle Management', 'J02': 'Directory Services Review', 'J03': 'SSO Configuration', 'J04': 'MFA Coverage & Exceptions', 'J05': 'Privileged Identity Management', 'J06': 'Service Account Governance', 'J07': 'Access Recertification Campaigns', 'J08': 'RBAC Framework Alignment', 'J09': 'IAG Tooling Review', 'J10': 'Segregation Across Cloud & On-Prem'};
+
+// Build procedure list for a domain
+function getProcList(domainCode) {
+  const procs = [];
+  for (let i=1; i<=10; i++) {
+    const num = String(i).padStart(2,'0');
+    const code = `${domainCode}${num}`;
+    procs.push({ code, title: PROC_NAMES[code] || code });
+  }
+  return procs;
+}
+
+// Map procedure code (e.g. A01) to exact B2 filename
+function buildFilename(procCode) {
+  const fileMap = {
+    'A01':'KABO-AUD-CTL-001-A01_v3_fnd_merged_Role_Design_Review.docx',
+    'A02':'KABO-AUD-CTL-001-A02_v3_fnd_merged_SoD_Conflict_Identification.docx',
+    'A03':'KABO-AUD-CTL-001-A03_v3_fnd_merged_User_Master_Record_Review.docx',
+    'A04':'KABO-AUD-CTL-001-A04_v3_fnd_merged_Auth_Object_Level_Testing.docx',
+    'A05':'KABO-AUD-CTL-001-A05_v3_fnd_merged_EAM_Firefighter_Log_Review.docx',
+    'A06':'KABO-AUD-CTL-001-A06_v3_fnd_merged_Privileged_Access_Review.docx',
+    'A07':'KABO-AUD-CTL-001-A07_v3_fnd_merged_Role_Ownership_Recertification.docx',
+    'A08':'KABO-AUD-CTL-001-A08_v3_fnd_merged_Provisioning_Deprovisioning.docx',
+    'A09':'KABO-AUD-CTL-001-A09_v3_fnd_merged_GRC_Configuration_Review.docx',
+    'A10':'KABO-AUD-CTL-001-A10_v3_fnd_merged_Period_End_Access_Controls.docx',
+    'C01':'KABO-AUD-CTL-001-C01_v3_fnd_merged_GRC_Connector_Configuration.docx',
+    'C02':'KABO-AUD-CTL-001-C02_v3_fnd_merged_Ruleset_Currency.docx',
+    'C03':'KABO-AUD-CTL-001-C03_v3_fnd_merged_Risk_Analysis_Scope.docx',
+    'C04':'KABO-AUD-CTL-001-C04_v3_fnd_merged_Workflow_Configuration.docx',
+    'C05':'KABO-AUD-CTL-001-C05_v3_fnd_merged_MSMP_Routing_Rules.docx',
+    'C06':'KABO-AUD-CTL-001-C06_v3_fnd_merged_BRM_Mass_Generation.docx',
+    'C07':'KABO-AUD-CTL-001-C07_v3_fnd_merged_Access_Request_Form.docx',
+    'C08':'KABO-AUD-CTL-001-C08_v3_fnd_merged_EAM_Configuration.docx',
+    'C09':'KABO-AUD-CTL-001-C09_v3_fnd_merged_UAR_Campaign_Configuration.docx',
+    'C10':'KABO-AUD-CTL-001-C10_v3_fnd_merged_GRC_Reporting.docx',
+    'D01':'KABO-AUD-CTL-001-D01_v3_fnd_merged_RFC_Destination_Inventory.docx',
+    'D02':'KABO-AUD-CTL-001-D02_v3_fnd_merged_Trusted_RFC_Mapping.docx',
+    'D03':'KABO-AUD-CTL-001-D03_v3_fnd_merged_RFC_User_Account_Review.docx',
+    'D04':'KABO-AUD-CTL-001-D04_v3_fnd_merged_RFC_Stored_Credentials.docx',
+    'D05':'KABO-AUD-CTL-001-D05_v3_fnd_merged_RFC_Auth_Objects.docx',
+    'D06':'KABO-AUD-CTL-001-D06_v3_fnd_merged_Interface_Landscape.docx',
+    'D07':'KABO-AUD-CTL-001-D07_v3_fnd_merged_IDOC_Partner_Profile_Review.docx',
+    'D08':'KABO-AUD-CTL-001-D08_v3_fnd_merged_Middleware_Security.docx',
+    'D09':'KABO-AUD-CTL-001-D09_v3_fnd_merged_File_Interface_Controls.docx',
+    'D10':'KABO-AUD-CTL-001-D10_v3_fnd_merged_RFC_Callback_RFM_Review.docx',
+    'E01':'KABO-AUD-CTL-001-E01_v3_fnd_merged_OS_Level_User_Access.docx',
+    'E02':'KABO-AUD-CTL-001-E02_v3_fnd_merged_Database_User_Review.docx',
+    'E03':'KABO-AUD-CTL-001-E03_v3_fnd_merged_SAP_Profile_Parameter_Review.docx',
+    'E04':'KABO-AUD-CTL-001-E04_v3_fnd_merged_Network_Topology_Review.docx',
+    'E05':'KABO-AUD-CTL-001-E05_v3_fnd_merged_SAP_Router_Message_Server.docx',
+    'E06':'KABO-AUD-CTL-001-E06_v3_fnd_merged_ABAP_Java_Stack_Hardening.docx',
+    'E07':'KABO-AUD-CTL-001-E07_v3_fnd_merged_ICM_HTTPS_Enforcement.docx',
+    'E08':'KABO-AUD-CTL-001-E08_v3_fnd_merged_Encryption_in_Transit.docx',
+    'E09':'KABO-AUD-CTL-001-E09_v3_fnd_merged_Encryption_at_Rest.docx',
+    'E10':'KABO-AUD-CTL-001-E10_v3_fnd_merged_Vulnerability_Assessment.docx',
+    'F01':'KABO-AUD-CTL-001-F01_v3_fnd_merged_Fiori_Launchpad_Access.docx',
+    'F02':'KABO-AUD-CTL-001-F02_v3_fnd_merged_OData_Service_Exposure.docx',
+    'F03':'KABO-AUD-CTL-001-F03_v3_fnd_merged_SICF_Service_Activation.docx',
+    'F04':'KABO-AUD-CTL-001-F04_v3_fnd_merged_FES_BES_Alignment.docx',
+    'F05':'KABO-AUD-CTL-001-F05_v3_fnd_merged_Web_Dispatcher_Config.docx',
+    'F06':'KABO-AUD-CTL-001-F06_v3_fnd_merged_Fiori_Auth_Concept.docx',
+    'F07':'KABO-AUD-CTL-001-F07_v3_fnd_merged_Mobile_Device_Controls.docx',
+    'F08':'KABO-AUD-CTL-001-F08_v3_fnd_merged_Session_Management.docx',
+    'F09':'KABO-AUD-CTL-001-F09_v3_fnd_merged_Fiori_SoD_Exposure.docx',
+    'F10':'KABO-AUD-CTL-001-F10_v3_fnd_merged_Custom_Fiori_App_Security.docx',
+    'G01':'KABO-AUD-CTL-001-G01_v3_fnd_merged_BTP_Global_Account_and_Subaccount_Structure_Review.docx',
+    'G02':'KABO-AUD-CTL-001-G02_v3_fnd_merged_Identity_and_Access_Management_IASIPS_Configuration_Review.docx',
+    'G03':'KABO-AUD-CTL-001-G03_v3_fnd_merged_Trust_Configuration_Corporate_IdP_Federation_and_SAML_Assert.docx',
+    'G04':'KABO-AUD-CTL-001-G04_v3_fnd_merged_Role_Collection_Assignment_BTP_Cockpit_Admin_Developer_Viewe.docx',
+    'G05':'KABO-AUD-CTL-001-G05_v3_fnd_merged_BTP_Service_Instance_Security_Binding_Credentials_and_Secret.docx',
+    'G06':'KABO-AUD-CTL-001-G06_v3_fnd_merged_SAP_Integration_Suite_iFlow_Security_Policies_and_Credential.docx',
+    'G07':'KABO-AUD-CTL-001-G07_v3_fnd_merged_SAP_Extension_Suite_Custom_App_Authorisation_Review.docx',
+    'G08':'KABO-AUD-CTL-001-G08_v3_fnd_merged_API_Management_API_Policies_OAuth_20_and_API_Key_Controls.docx',
+    'G09':'KABO-AUD-CTL-001-G09_v3_fnd_merged_Audit_Log_Service_Configuration_on_BTP.docx',
+    'G10':'KABO-AUD-CTL-001-G10_v3_fnd_merged_BTP_Connectivity_Service_Cloud_Connector_Configuration_and_P.docx',
+    'J01':'KABO-AUD-CTL-001-J01_v3_fnd_merged_Identity_Lifecycle_Management_Joiner_Mover_Leaver_Process_Re.docx',
+    'J02':'KABO-AUD-CTL-001-J02_v3_fnd_merged_Directory_Services_Review_Active_Directory_LDAP_Group_Member.docx',
+    'J03':'KABO-AUD-CTL-001-J03_v3_fnd_merged_Single_SignOn_SSO_Configuration_SAML_20_OAuth_Kerberos.docx',
+    'J04':'KABO-AUD-CTL-001-J04_v3_fnd_merged_MultiFactor_Authentication_MFA_Coverage_Scope_Exceptions.docx',
+    'J05':'KABO-AUD-CTL-001-J05_v3_fnd_merged_Privileged_Identity_Management_PIM_JustinTime_Access_Control.docx',
+    'J06':'KABO-AUD-CTL-001-J06_v3_fnd_merged_Service_Account_Governance_Inventory_Ownership_Password_Rota.docx',
+    'J07':'KABO-AUD-CTL-001-J07_v3_fnd_merged_Access_Recertification_Campaigns_Frequency_Completion_Rate_E.docx',
+    'J08':'KABO-AUD-CTL-001-J08_v3_fnd_merged_RoleBased_Access_Control_RBAC_Framework_Alignment_with_HR_Da.docx',
+    'J09':'KABO-AUD-CTL-001-J09_v3_fnd_merged_IAG_Tooling_Review_SailPoint_Saviynt_CyberArk_If_in_Scope.docx',
+    'J10':'KABO-AUD-CTL-001-J10_v3_fnd_merged_Segregation_of_Access_Across_Cloud_OnPremise_and_Hybrid_Envi.docx',
+  };
+  return fileMap[procCode] || null;
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let _user = null;
+let _email = '';
+let _activeDomain = null;
+let _activeProc = null;
+let _openDomains = new Set();
+
+// ── SESSION GUARD ──────────────────────────────────────────────────────────
+(async function tibSessionGuard() {
+  const { data: { session } } = await _supa.auth.getSession();
+  if (!session) return; // stays on login
+  const { data: enroll } = await _supa.from('enrollments')
+    .select('is_active,expiry_date')
+    .eq('user_id', session.user.id)
+    .eq('course', COURSE)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!enroll) return; // not enrolled — stays on login
+  if (enroll.expiry_date && new Date(enroll.expiry_date) < new Date()) return;
+  _user = session.user;
+  _email = session.user.email;
+  showApp();
+})();
+
+// ── AUTH FUNCTIONS ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='signin'?0:1)));
+  document.getElementById('tab-signin').classList.toggle('active', tab==='signin');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+}
+
+async function doSignIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  const msg = document.getElementById('si-msg');
+  msg.className = 'login-msg';
+  if (!email||!pass) { msg.className='login-msg error'; msg.textContent='Please enter email and password.'; return; }
+  const { data, error } = await _supa.auth.signInWithPassword({ email, password: pass });
+  if (error) { msg.className='login-msg error'; msg.textContent=error.message; return; }
+  // Check enrollment
+  const { data: enroll } = await _supa.from('enrollments')
+    .select('is_active,expiry_date')
+    .eq('user_id', data.user.id)
+    .eq('course', COURSE)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!enroll) {
+    await _supa.auth.signOut();
+    msg.className='login-msg error';
+    msg.textContent='No active SCC enrolment found. Please contact admin@tib-systems.com';
+    return;
+  }
+  if (enroll.expiry_date && new Date(enroll.expiry_date) < new Date()) {
+    await _supa.auth.signOut();
+    msg.className='login-msg error'; msg.textContent='Your access has expired. Please contact admin@tib-systems.com'; return;
+  }
+  _user = data.user; _email = email;
+  showApp();
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const msg = document.getElementById('reg-msg');
+  msg.className = 'login-msg';
+  if (!name||!email||!pass) { msg.className='login-msg error'; msg.textContent='All fields required.'; return; }
+  if (pass.length < 8) { msg.className='login-msg error'; msg.textContent='Password must be at least 8 characters.'; return; }
+  const { data, error } = await _supa.auth.signUp({
+    email, password: pass,
+    options: { data:{ full_name:name }, emailRedirectTo: LMS_URL }
+  });
+  if (error) { msg.className='login-msg error'; msg.textContent=error.message; return; }
+  msg.className='login-msg success';
+  msg.textContent='Account created! Check your email to confirm, then sign in. If you purchased through our website, your access will be activated within a few minutes.';
+}
+
+async function doSignOut() {
+  await _supa.auth.signOut();
+  location.reload();
+}
+
+// ── SHOW APP ───────────────────────────────────────────────────────────────
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  const app = document.getElementById('main-app');
+  app.style.display = 'flex';
+  document.getElementById('topbar-user').textContent = _email;
+  document.getElementById('watermark-bar').textContent = `TIB SYSTEMS — LICENSED TO: ${_email.toUpperCase()} — UNAUTHORISED DISTRIBUTION PROHIBITED`;
+  buildSidebar();
+  showWelcome();
+}
+
+// ── SIDEBAR ────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const dl = document.getElementById('domain-list');
+  dl.innerHTML = '';
+  DOMAINS.forEach(dom => {
+    const di = document.createElement('div');
+    di.className = 'domain-item';
+    di.id = `dom-${dom.code}`;
+    di.innerHTML = `<div class="domain-code">Domain ${dom.code}</div><div class="domain-name">${dom.name}</div><div class="domain-count">${dom.procs} procedures</div>`;
+    di.onclick = () => toggleDomain(dom.code);
+    dl.appendChild(di);
+    const pl = document.createElement('div');
+    pl.className = 'proc-list';
+    pl.id = `procs-${dom.code}`;
+    getProcList(dom.code).forEach(proc => {
+      const pi = document.createElement('div');
+      pi.className = 'proc-item';
+      pi.id = `proc-${proc.code}`;
+      const display = proc.code.slice(0,1) + '-' + proc.code.slice(1);
+      const name = proc.title ? ` — ${proc.title}` : '';
+      pi.textContent = display + name;
+      pi.onclick = () => loadProcedure(dom.code, proc.code);
+      pl.appendChild(pi);
+    });
+    dl.appendChild(pl);
+  });
+
+  const rl = document.getElementById('resource-links');
+  RESOURCES.forEach((r,i) => {
+    const ri = document.createElement('div');
+    ri.className = 'resource-item';
+    ri.textContent = r.label;
+    ri.onclick = () => showResourceDetail(i);
+    rl.appendChild(ri);
+  });
+}
+
+function toggleDomain(code) {
+  const domEl = document.getElementById(`dom-${code}`);
+  const procEl = document.getElementById(`procs-${code}`);
+  const isOpen = _openDomains.has(code);
+  // Close all
+  _openDomains.forEach(c => {
+    document.getElementById(`dom-${c}`)?.classList.remove('active');
+    document.getElementById(`procs-${c}`)?.classList.remove('open');
+  });
+  _openDomains.clear();
+  if (!isOpen) {
+    _openDomains.add(code);
+    domEl.classList.add('active');
+    procEl.classList.add('open');
+  }
+  closeSidebar();
+}
+
+// ── MOBILE SIDEBAR ─────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+// ── WELCOME SCREEN ─────────────────────────────────────────────────────────
+function showWelcome() {
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="welcome-card">
+      <h2>Welcome to the TIB SCC Programme</h2>
+      <p>You are enrolled in the <strong>Senior Controls Consultant (SCC) Programme</strong> — 7 SAP audit domains, 70 procedures, Big 4-calibrated standards.</p>
+      <p>Select a domain from the left sidebar to begin, or use the Resource Library to access your course materials.</p>
+      <div class="pathway-grid">
+        ${DOMAINS.map(d=>`
+          <div class="pathway-card" onclick="toggleDomain('${d.code}')">
+            <div class="pc-code">Domain ${d.code}</div>
+            <div class="pc-name">${d.name}</div>
+            <div class="pc-count">${d.procs} procedures</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── LOAD PROCEDURE ─────────────────────────────────────────────────────────
+async function loadProcedure(domainCode, procCode) {
+  // Clear active states
+  document.querySelectorAll('.proc-item').forEach(el=>el.classList.remove('active'));
+  const procEl = document.getElementById(`proc-${procCode}`);
+  if (procEl) procEl.classList.add('active');
+  _activeProc = procCode;
+  closeSidebar();
+
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="proc-header">
+      <h2>${procCode.slice(0,1)+'-'+procCode.slice(1)} &mdash; ${PROC_NAMES[procCode]||procCode}</h2>
+      <div class="proc-meta">Domain ${domainCode} — ${DOMAINS.find(d=>d.code===domainCode)?.name||''}</div>
+    </div>
+    <div class="proc-content-box">
+      <div class="loading-spinner"><div class="spinner"></div><div>Loading procedure document...</div></div>
+    </div>`;
+
+  // Fetch DOCX from B2
+  const fileName = buildFilename(procCode);
+  if (!fileName) {
+    ci.querySelector('.proc-content-box').innerHTML = `<div class="error-box"><strong>Filename not found for procedure ${procCode}.</strong></div>`;
+    return;
+  }
+  const url = `${B2_BASE}/${fileName}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const arrayBuf = await resp.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuf });
+    ci.querySelector('.proc-content-box').innerHTML = `<div class="proc-doc-render">${result.value}</div>`;
+    addWatermarkOverlay(ci.querySelector('.proc-doc-render'));
+  } catch(e) {
+    ci.querySelector('.proc-content-box').innerHTML = `
+      <div class="error-box">
+        <strong>Unable to load procedure document.</strong><br>
+        File: ${fileName}<br>
+        Please ensure the document has been uploaded to Backblaze B2 (scc-cl-docs/${fileName}).<br>
+        Error: ${e.message}
+      </div>`;
+  }
+}
+
+function addWatermarkOverlay(el) {
+  const wm = document.createElement('div');
+  wm.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:14px;color:rgba(31,56,100,0.06);font-weight:900;letter-spacing:2px;pointer-events:none;white-space:nowrap;z-index:0';
+  wm.textContent = `TIB SYSTEMS — ${_email}`;
+  el.style.position = 'relative';
+  el.appendChild(wm);
+}
+
+// ── RESOURCES ──────────────────────────────────────────────────────────────
+function showResources() {
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="resource-card">
+      <h2>&#128194; Resource Library</h2>
+      <p>Your course materials are available below. These documents are licensed exclusively to your account — do not share or distribute.</p>
+      ${RESOURCES.map((r,i)=>`
+        <div style="border:1px solid #e0e6ef;border-radius:6px;padding:16px;margin-bottom:14px">
+          <div style="font-size:15px;font-weight:700;color:#1F3864;margin-bottom:6px">${r.label}</div>
+          <div style="font-size:13px;color:#555;margin-bottom:12px">${r.desc}</div>
+          <button class="resource-download-btn" onclick="showResourceDetail(${i})">View Document</button>
+        </div>`).join('')}
+    </div>`;
+  closeSidebar();
+}
+
+function showResourceDetail(idx) {
+  const r = RESOURCES[idx];
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="resource-card">
+      <h2>${r.label}</h2>
+      <p>${r.desc}</p>
+      <p style="font-size:12px;color:#888;margin-bottom:16px">&#9888; This document is watermarked to your account: ${_email}. Redistribution is prohibited under your licence agreement.</p>
+      <div class="loading-spinner"><div class="spinner"></div><div>Loading document...</div></div>
+    </div>`;
+  const url = `${B2_BASE}/${r.file}`;
+  fetch(url).then(resp => {
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.arrayBuffer();
+  }).then(buf => mammoth.convertToHtml({ arrayBuffer: buf }))
+    .then(result => {
+      ci.querySelector('.resource-card').innerHTML = `
+        <h2>${r.label}</h2>
+        <p style="font-size:12px;color:#C65911;margin-bottom:16px;font-weight:700">LICENSED TO: ${_email.toUpperCase()}</p>
+        <div class="proc-doc-render">${result.value}</div>`;
+    })
+    .catch(e => {
+      ci.querySelector('.resource-card').innerHTML = `
+        <h2>${r.label}</h2>
+        <div class="error-box">Document not yet available at ${url}.<br>Error: ${e.message}</div>`;
+    });
+  closeSidebar();
+}
+
+// ── IP PROTECTION ──────────────────────────────────────────────────────────
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key==='F12'||(e.ctrlKey&&['u','U','s','S','c','C','p','P'].includes(e.key))) e.preventDefault();
+});
+</script>
+</body>
+</html>
