@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIB Systems — SCC Programme</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f4f6f9;color:#222;min-height:100vh}
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1F3864 0%,#1F7A8C 100%)}
+  .login-box{background:#fff;border-radius:10px;padding:40px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+  .login-logo{text-align:center;margin-bottom:24px}
+  .login-logo h1{font-size:22px;color:#1F3864;font-weight:800;letter-spacing:1px}
+  .login-logo p{font-size:13px;color:#1F7A8C;margin-top:4px}
+  .login-tabs{display:flex;border-bottom:2px solid #e0e6ef;margin-bottom:24px}
+  .login-tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+  .login-tab.active{color:#1F3864;border-bottom-color:#1F3864}
+  .login-panel{display:none}.login-panel.active{display:block}
+  .login-field{margin-bottom:16px}
+  .login-field label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .login-field input{width:100%;padding:11px 14px;border:1.5px solid #d0d8e8;border-radius:6px;font-size:16px;transition:border .2s;outline:none}
+  .login-field input:focus{border-color:#1F7A8C}
+  .login-btn{width:100%;padding:13px;background:#1F3864;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:background .2s}
+  .login-btn:hover{background:#1F7A8C}
+  .login-msg{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:13px;display:none}
+  .login-msg.error{background:#fdeaea;color:#c0392b;display:block}
+  .login-msg.success{background:#eafaf1;color:#1a7a4a;display:block}
+  .login-badges{display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+  .login-badge{background:#EEF3FA;color:#1F3864;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;letter-spacing:.3px}
+
+  /* ── MAIN APP ── */
+  #main-app{display:none;min-height:100vh;flex-direction:column}
+  
+  /* Top bar */
+  .topbar{background:#1F3864;color:#fff;display:flex;align-items:center;padding:0 20px;height:54px;position:sticky;top:0;z-index:100;gap:12px}
+  .home-btn{
+    background:#1F7A8C;
+    border:none;
+    border-radius:6px;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    flex-shrink:0;
+    transition:background .2s, transform .15s;
+    padding:0;
+  }
+  .home-btn:hover{background:#C65911;transform:scale(1.08)}
+  .home-btn svg{display:block}
+    .hamburger{background:none;border:none;cursor:pointer;padding:6px;display:none;flex-direction:column;gap:5px}
+  .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .3s}
+  .topbar-title{font-size:16px;font-weight:800;letter-spacing:.5px;flex:1}
+  .topbar-user{font-size:12px;color:#a0bcd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .topbar-logout{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:background .2s;white-space:nowrap}
+  .topbar-logout:hover{background:rgba(255,255,255,.1)}
+
+  /* Watermark */
+  .watermark-bar{background:#C65911;color:#fff;text-align:center;font-size:11px;font-weight:700;padding:4px;letter-spacing:1px}
+
+  /* Layout */
+  .app-body{display:flex;flex:1;min-height:calc(100vh - 54px - 26px)}
+
+  /* Sidebar */
+  #sidebar{width:260px;min-width:260px;background:#1F3864;color:#fff;overflow-y:auto;transition:transform .3s;flex-shrink:0}
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+  .sidebar-header{padding:18px 16px 10px;font-size:11px;font-weight:700;color:#7aa3cc;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .domain-item{cursor:pointer;padding:14px 16px;border-left:3px solid transparent;transition:all .15s;user-select:none}
+  .domain-item:hover{background:rgba(255,255,255,.07);border-left-color:#1F7A8C}
+  .domain-item.active{background:rgba(31,122,140,.25);border-left-color:#1F7A8C}
+  .domain-item .domain-code{font-size:11px;font-weight:700;color:#1F7A8C;text-transform:uppercase;letter-spacing:1px}
+  .domain-item .domain-name{font-size:13px;color:#d8e8f5;margin-top:2px;line-height:1.3}
+  .domain-item .domain-count{font-size:11px;color:#7aa3cc;margin-top:2px}
+  .proc-list{background:rgba(0,0,0,.15);display:none}
+  .proc-list.open{display:block}
+  .proc-item{padding:9px 16px 9px 28px;font-size:11.5px;color:#a8c8e8;cursor:pointer;transition:background .15s;border-left:3px solid transparent;line-height:1.45;white-space:normal}
+  .proc-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .proc-item.active{background:rgba(31,122,140,.3);color:#fff;border-left-color:#C65911}
+
+  /* Resource Library in sidebar */
+  .resource-section{border-top:1px solid rgba(255,255,255,.1);margin-top:8px}
+  .resource-header{padding:14px 16px;font-size:11px;font-weight:700;color:#C65911;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+  .resource-item{padding:10px 16px 10px 28px;font-size:12px;color:#a8c8e8;cursor:pointer;transition:background .15s}
+  .resource-item:hover{background:rgba(255,255,255,.06);color:#fff}
+
+  /* Content area */
+  #content-area{flex:1;padding:28px 32px;overflow-y:auto;background:#f4f6f9}
+  .welcome-card{background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:700px}
+  .welcome-card h2{font-size:22px;color:#1F3864;margin-bottom:12px}
+  .welcome-card p{color:#555;line-height:1.7;margin-bottom:10px;font-size:14px}
+  .pathway-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:20px}
+  .pathway-card{background:#EEF3FA;border-radius:6px;padding:14px;border-left:4px solid #1F7A8C}
+  .pathway-card .pc-code{font-size:11px;font-weight:700;color:#1F7A8C;text-transform:uppercase;letter-spacing:1px}
+  .pathway-card .pc-name{font-size:13px;color:#1F3864;font-weight:600;margin-top:4px}
+  .pathway-card .pc-count{font-size:12px;color:#888;margin-top:2px}
+
+  /* Procedure content */
+  .proc-header{background:#fff;border-radius:8px 8px 0 0;padding:20px 24px;border-bottom:2px solid #1F7A8C;margin-bottom:0}
+  .proc-header h2{font-size:18px;color:#1F3864;font-weight:800}
+  .proc-header .proc-meta{font-size:12px;color:#1F7A8C;margin-top:4px;font-weight:600}
+  .proc-content-box{background:#fff;border-radius:0 0 8px 8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px}
+  .proc-doc-render{font-size:14px;line-height:1.7;color:#333}
+  .proc-doc-render h1,.proc-doc-render h2,.proc-doc-render h3{color:#1F3864;margin:16px 0 8px;font-weight:700}
+  .proc-doc-render p{margin-bottom:10px}
+  .proc-doc-render table{width:100%;border-collapse:collapse;margin:12px 0}
+  .proc-doc-render td,.proc-doc-render th{border:1px solid #d0d8e8;padding:8px 10px;font-size:13px}
+  .proc-doc-render th{background:#EEF3FA;font-weight:700;color:#1F3864}
+  .proc-doc-render ul,.proc-doc-render ol{padding-left:20px;margin-bottom:10px}
+  .proc-doc-render li{margin-bottom:4px}
+  .loading-spinner{text-align:center;padding:40px;color:#888}
+  .loading-spinner .spinner{width:36px;height:36px;border:3px solid #e0e6ef;border-top-color:#1F7A8C;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-box{background:#fdeaea;border-left:4px solid #e74c3c;padding:16px;border-radius:4px;color:#c0392b;font-size:13px}
+
+  /* Resource viewer */
+  .resource-card{background:#fff;border-radius:8px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:720px}
+  .resource-card h2{font-size:18px;color:#1F3864;margin-bottom:8px}
+  .resource-card p{color:#555;font-size:14px;line-height:1.6;margin-bottom:14px}
+  .resource-download-btn{display:inline-block;background:#1F7A8C;color:#fff;padding:10px 20px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;border:none;margin-top:8px;transition:background .2s}
+  .resource-download-btn:hover{background:#1F3864}
+
+  /* Mobile */
+  @media(max-width:768px){
+    .home-btn{
+    background:#1F7A8C;
+    border:none;
+    border-radius:6px;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    flex-shrink:0;
+    transition:background .2s, transform .15s;
+    padding:0;
+  }
+  .home-btn:hover{background:#C65911;transform:scale(1.08)}
+  .home-btn svg{display:block}
+    .hamburger{display:flex}
+    #sidebar{position:fixed;left:0;top:54px;bottom:0;z-index:95;transform:translateX(-100%)}
+    #sidebar.open{transform:translateX(0)}
+    #sidebar-overlay.open{display:block}
+    #content-area{padding:16px}
+    .topbar-user{display:none}
+    .welcome-card,.resource-card{padding:20px}
+  }
+  @media(max-width:480px){
+    .login-box{padding:24px 18px;margin:16px}
+    .pathway-grid{grid-template-columns:1fr 1fr}
+  }
+</style>
+<style>body{visibility:hidden}</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>TIB SYSTEMS INC.</h1>
+      <p>Senior Controls Consultant Programme</p>
+    </div>
+    <div class="login-badges">
+      <span class="login-badge">7 SCC Domains</span>
+      <span class="login-badge">SAP Controls Audit</span>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchTab('signin')">Sign In</div>
+      <div class="login-tab" onclick="switchTab('register')">New Student</div>
+    </div>
+    <div id="tab-signin" class="login-panel active">
+      <div class="login-field"><label>Email</label><input type="email" id="si-email" placeholder="your@email.com"></div>
+      <div class="login-field"><label>Password</label><input type="password" id="si-pass" placeholder="Password"></div>
+      <button class="login-btn" onclick="doSignIn()">Sign In</button>
+      <div id="si-msg" class="login-msg"></div>
+    </div>
+    <div id="tab-register" class="login-panel">
+      <div class="login-field"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your full name"></div>
+      <div class="login-field"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
+      <div class="login-field"><label>Password</label><input type="password" id="reg-pass" placeholder="Create password (min 8 chars)"></div>
+      <button class="login-btn" onclick="doRegister()">Create Account</button>
+      <div id="reg-msg" class="login-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="main-app">
+  <div class="topbar">
+    <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="home-btn" onclick="showWelcome();closeSidebar();" title="Return to Home">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </button>
+    <div class="topbar-title" id="topbar-title-scc">TIB SCC Programme</div>
+    <div class="topbar-user" id="topbar-user"></div>
+    <button class="topbar-logout" onclick="doSignOut()">Sign Out</button>
+  </div>
+  <div class="watermark-bar" id="watermark-bar">TIB SYSTEMS — LICENSED CONTENT</div>
+  <div class="app-body">
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <nav id="sidebar">
+      <div class="sidebar-header">SCC Domains</div>
+      <div id="domain-list"></div>
+      <div class="resource-section">
+        <div class="resource-header" onclick="showResources()">&#128194; Resource Library</div>
+        <div id="resource-links"></div>
+      </div>
+      <div class="resource-section">
+        <div class="resource-header" onclick="showUserGuide()">&#128214; Trainee User Guide</div>
+      </div>
+    </nav>
+    <main id="content-area">
+      <div id="content-inner"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ───────────────────────────────────────────────────────────────
+const _supa = supabase.createClient(
+  'https://blfgwysgekfqhcafofhe.supabase.co',
+  'sb_publishable_ThLetpd4hj49fjce-kXoFA_v4ghwIqV'
+);
+
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const COURSE = 'scc';
+const SUPER_ADMIN = 'super.admin@tib-systems.com';
+const B2_BASE = 'https://f005.backblazeb2.com/file/kabo-training-docs/scc-cl-docs';
+const DOC1_BASE = 'https://f005.backblazeb2.com/file/kabo-training-docs/doc1-docs';
+const LMS_URL = 'https://scc.tib-systems.com';
+
+const DOMAINS = [
+  { code:'A', name:'Access Controls & Segregation of Duties', procs:10 },
+  { code:'C', name:'GRC Configuration Controls', procs:10 },
+  { code:'D', name:'RFC & Interface Controls', procs:10 },
+  { code:'E', name:'Infrastructure & OS Security Controls', procs:10 },
+  { code:'F', name:'Fiori & UI5 Security Controls', procs:10 },
+  { code:'G', name:'BTP & Cloud Platform Controls', procs:10 },
+  { code:'J', name:'Identity & Access Governance Controls', procs:10 },
+];
+
+const RESOURCES = [
+{ category: 'Field Playbooks & Companions', code: 'DOC3-SCC',
+    label: 'Doc 3 — SCC 30-Day Field Playbook', file: 'doc3-scc-playbook.pdf',
+    desc: 'Your structured SCC 30-day engagement roadmap.', base: B2_BASE },
+{ category: 'Field Playbooks & Companions', code: 'EPISODE-PACK',
+    label: 'Episode Study Pack', file: 'episode-study-pack.pdf',
+    desc: '25 annotated SAP screenshot study guides — one per LiveDemo episode.', base: B2_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-001",
+    label: "S1-M001 Theory — User Role Admin", file: "Section1-SAP-Tasks/TIB-TRN-S1-001_User_Role_Admin_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-001-LAB",
+    label: "S1-M001 Lab — User Role Admin", file: "Section1-SAP-Tasks/TIB-TRN-S1-001-LAB_User_Role_Admin.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-002",
+    label: "S1-M002 Theory — Auth Object Analysis", file: "Section1-SAP-Tasks/TIB-TRN-S1-002_Auth_Object_Analysis_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-002-LAB",
+    label: "S1-M002 Lab — Authorization Object Analysis", file: "Section1-SAP-Tasks/TIB-TRN-S1-002-LAB_Authorization_Object_Analysis.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-003",
+    label: "S1-M003 Theory — SoD Conflict ID", file: "Section1-SAP-Tasks/TIB-TRN-S1-003_SoD_Conflict_ID_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-003-LAB",
+    label: "S1-M003 Lab — SoD Conflict Identification", file: "Section1-SAP-Tasks/TIB-TRN-S1-003-LAB_SoD_Conflict_Identification.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-004",
+    label: "S1-M004 Theory — GRC ARA", file: "Section1-SAP-Tasks/TIB-TRN-S1-004_GRC_ARA_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-004-LAB",
+    label: "S1-M004 Lab — GRC Access Risk Analysis", file: "Section1-SAP-Tasks/TIB-TRN-S1-004-LAB_GRC_Access_Risk_Analysis.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-005",
+    label: "S1-M005 Theory — GRC ARM", file: "Section1-SAP-Tasks/TIB-TRN-S1-005_GRC_ARM_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-005-LAB",
+    label: "S1-M005 Lab — GRC Access Request Management", file: "Section1-SAP-Tasks/TIB-TRN-S1-005-LAB_GRC_Access_Request_Management.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-006",
+    label: "S1-M006 Theory — GRC EAM", file: "Section1-SAP-Tasks/TIB-TRN-S1-006_GRC_EAM_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-006-LAB",
+    label: "S1-M006 Lab — GRC Emergency Access Management", file: "Section1-SAP-Tasks/TIB-TRN-S1-006-LAB_GRC_Emergency_Access_Management.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-007",
+    label: "S1-M007 Theory — GRC PC RM", file: "Section1-SAP-Tasks/TIB-TRN-S1-007_GRC_PC_RM_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-007-LAB",
+    label: "S1-M007 Lab — GRC Process Control and Risk Management", file: "Section1-SAP-Tasks/TIB-TRN-S1-007-LAB_GRC_Process_Control_and_Risk_Management.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-008",
+    label: "S1-M008 Theory — Sensitive TCode Review", file: "Section1-SAP-Tasks/TIB-TRN-S1-008_Sensitive_TCode_Review_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-008-LAB",
+    label: "S1-M008 Lab — Sensitive and Critical Transaction Review", file: "Section1-SAP-Tasks/TIB-TRN-S1-008-LAB_Sensitive_and_Critical_Transaction_Review.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-009",
+    label: "S1-M009 Theory — Profile AuthObj DeepDive", file: "Section1-SAP-Tasks/TIB-TRN-S1-009_Profile_AuthObj_DeepDive_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-009-LAB",
+    label: "S1-M009 Lab — Profile and Authorization Object Deep Dive", file: "Section1-SAP-Tasks/TIB-TRN-S1-009-LAB_Profile_and_Authorization_Object_Deep_Dive.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-010",
+    label: "S1-M010 Theory — S4HANA Security Arch", file: "Section1-SAP-Tasks/TIB-TRN-S1-010_S4HANA_Security_Arch_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-010-LAB",
+    label: "S1-M010 Lab — S 4HANA Security Architecture Review", file: "Section1-SAP-Tasks/TIB-TRN-S1-010-LAB_S_4HANA_Security_Architecture_Review.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-011",
+    label: "S1-M011 Theory — Fiori OData Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-011_Fiori_OData_Security_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-011-LAB",
+    label: "S1-M011 Lab — Fiori OData Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-011-LAB_Fiori_OData_Security.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-012",
+    label: "S1-M012 Theory — Transport Change Control", file: "Section1-SAP-Tasks/TIB-TRN-S1-012_Transport_Change_Control_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-012-LAB",
+    label: "S1-M012 Lab — Transport Change Control", file: "Section1-SAP-Tasks/TIB-TRN-S1-012-LAB_Transport_Change_Control.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-013",
+    label: "S1-M013 Theory — System Client Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-013_System_Client_Security_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-013-LAB",
+    label: "S1-M013 Lab — System Client Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-013-LAB_System_Client_Security.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-014",
+    label: "S1-M014 Theory — User Provisioning Lifecycle", file: "Section1-SAP-Tasks/TIB-TRN-S1-014_User_Provisioning_Lifecycle_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-014-LAB",
+    label: "S1-M014 Lab — User Provisioning Lifecycle", file: "Section1-SAP-Tasks/TIB-TRN-S1-014-LAB_User_Provisioning_Lifecycle.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-015",
+    label: "S1-M015 Theory — Basis Technical Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-015_Basis_Technical_Security_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-015-LAB",
+    label: "S1-M015 Lab — Basis Technical Security", file: "Section1-SAP-Tasks/TIB-TRN-S1-015-LAB_Basis_Technical_Security.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-016",
+    label: "S1-M016 Theory — HR Auth Concept HCM", file: "Section1-SAP-Tasks/TIB-TRN-S1-016_HR_Auth_Concept_HCM_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-016-LAB",
+    label: "S1-M016 Lab — HR Auth Concept HCM", file: "Section1-SAP-Tasks/TIB-TRN-S1-016-LAB_HR_Auth_Concept_HCM.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-017",
+    label: "S1-M017 Theory — Security Audit Log AIS", file: "Section1-SAP-Tasks/TIB-TRN-S1-017_Security_Audit_Log_AIS_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-017-LAB",
+    label: "S1-M017 Lab — Security Audit Log", file: "Section1-SAP-Tasks/TIB-TRN-S1-017-LAB_Security_Audit_Log.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-018",
+    label: "S1-M018 Theory — Table Level Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-018_Table_Level_Controls_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-018-LAB",
+    label: "S1-M018 Lab — Logical DB Table Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-018-LAB_Logical_DB_Table_Controls.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-019",
+    label: "S1-M019 Theory — App Controls Automated", file: "Section1-SAP-Tasks/TIB-TRN-S1-019_App_Controls_Automated_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-019-LAB",
+    label: "S1-M019 Lab — App Controls Automated", file: "Section1-SAP-Tasks/TIB-TRN-S1-019-LAB_App_Controls_Automated.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-020",
+    label: "S1-M020 Theory — BizProcess Controls P2P OTC R2R", file: "Section1-SAP-Tasks/TIB-TRN-S1-020_BizProcess_Controls_P2P_OTC_R2R_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-020-LAB",
+    label: "S1-M020 Lab — Business Process Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-020-LAB_Business_Process_Controls.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-021",
+    label: "S1-M021 Theory — Financial Close Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-021_Financial_Close_Controls_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-021-LAB",
+    label: "S1-M021 Lab — Financial Close Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-021-LAB_Financial_Close_Controls.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-022",
+    label: "S1-M022 Theory — MDG Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-022_MDG_Controls_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-022-LAB",
+    label: "S1-M022 Lab — Master Data Governance", file: "Section1-SAP-Tasks/TIB-TRN-S1-022-LAB_Master_Data_Governance.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-023",
+    label: "S1-M023 Theory — Interface Data Integrity", file: "Section1-SAP-Tasks/TIB-TRN-S1-023_Interface_Data_Integrity_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-023-LAB",
+    label: "S1-M023 Lab — Interface Data Integrity", file: "Section1-SAP-Tasks/TIB-TRN-S1-023-LAB_Interface_Data_Integrity.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-024",
+    label: "S1-M024 Theory — Workflow Approval Chain", file: "Section1-SAP-Tasks/TIB-TRN-S1-024_Workflow_Approval_Chain_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-024-LAB",
+    label: "S1-M024 Lab — Workflow Approval Chain", file: "Section1-SAP-Tasks/TIB-TRN-S1-024-LAB_Workflow_Approval_Chain.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-025",
+    label: "S1-M025 Theory — ERP Config Review", file: "Section1-SAP-Tasks/TIB-TRN-S1-025_ERP_Config_Review_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-025-LAB",
+    label: "S1-M025 Lab — ERP Config Review", file: "Section1-SAP-Tasks/TIB-TRN-S1-025-LAB_ERP_Config_Review.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-026",
+    label: "S1-M026 Theory — Cloud BTP Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-026_Cloud_BTP_Controls_Theory.docx",
+    desc: "Theory guide — concept, market context, audit application.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-026-LAB",
+    label: "S1-M026 Lab — Cloud BTP Controls", file: "Section1-SAP-Tasks/TIB-TRN-S1-026-LAB_Cloud_BTP_Controls.docx",
+    desc: "Hands-on lab guide with live SAP screenshots.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-001",
+    label: "S1 Deliverable Template 001 — ITGC Logical Access Workpaper", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-001_ITGC_Logical_Access_Workpaper.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-002",
+    label: "S1 Deliverable Template 002 — SoD Conflict Register", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-002_SoD_Conflict_Register.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-003",
+    label: "S1 Deliverable Template 003 — Sensitive Access Report", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-003_Sensitive_Access_Report.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-004",
+    label: "S1 Deliverable Template 004 — CCCE Finding Sheet", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-004_CCCE_Finding_Sheet.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-005",
+    label: "S1 Deliverable Template 005 — UAR Pack", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-005_UAR_Pack.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-006",
+    label: "S1 Deliverable Template 006 — GRC Health Check Report", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-006_GRC_Health_Check_Report.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-007",
+    label: "S1 Deliverable Template 007 — Change Management Workpaper", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-007_Change_Management_Workpaper.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)", code: "S1-DT-008",
+    label: "S1 Deliverable Template 008 — Engagement Closeout Checklist", file: "Section1-SAP-Tasks/TIB-TRN-S1-DT-008_Engagement_Closeout_Checklist.docx",
+    desc: "Blank deliverable template — editable workpaper/register/checklist.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-001",
+    label: "S2-M001 Theory — Audit Planning & Scoping", file: "Section2-Audit-Methodology/TIB-TRN-S2-001_Audit_Planning___Scoping.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-001-LAB",
+    label: "S2-M001 Lab — Audit Planning and Scoping Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-001_Audit-Planning-and-Scoping-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-002",
+    label: "S2-M002 Theory — Risk Assessment & Risk Based Approach", file: "Section2-Audit-Methodology/TIB-TRN-S2-002_Risk_Assessment___Risk_Based_Approach.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-002-LAB",
+    label: "S2-M002 Lab — Risk Assessment and Risk Based Approach Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-002_Risk-Assessment-and-Risk-Based-Approach-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-003",
+    label: "S2-M003 Theory — Control Framework Knowledge COSO & COBIT", file: "Section2-Audit-Methodology/TIB-TRN-S2-003_Control_Framework_Knowledge__COSO___COBIT_.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-003-LAB",
+    label: "S2-M003 Lab — COSO COBIT Control Framework Application Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-003_COSO-COBIT-Control-Framework-Application-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-004",
+    label: "S2-M004 Theory — Regulatory & Compliance Awareness", file: "Section2-Audit-Methodology/TIB-TRN-S2-004_Regulatory___Compliance_Awareness.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-004-LAB",
+    label: "S2-M004 Lab — Regulatory Compliance Multi Jurisdiction Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-004_Regulatory-Compliance-Multi-Jurisdiction-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-005",
+    label: "S2-M005 Theory — Audit Program Development", file: "Section2-Audit-Methodology/TIB-TRN-S2-005_Audit_Program_Development.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-005-LAB",
+    label: "S2-M005 Lab — Audit Program Development Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-005_Audit-Program-Development-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-006",
+    label: "S2-M006 Theory — Sampling & Testing Methodology", file: "Section2-Audit-Methodology/TIB-TRN-S2-006_Sampling___Testing_Methodology.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-006-LAB",
+    label: "S2-M006 Lab — Sampling and Testing Methodology Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-006_Sampling-and-Testing-Methodology-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-007",
+    label: "S2-M007 Theory — Workpaper Preparation & Documentation", file: "Section2-Audit-Methodology/TIB-TRN-S2-007_Workpaper_Preparation___Documentation.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-007-LAB",
+    label: "S2-M007 Lab — Workpaper Preparation and Documentation Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-007_Workpaper-Preparation-and-Documentation-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-008",
+    label: "S2-M008 Theory — Evidence Collection & Evaluation", file: "Section2-Audit-Methodology/TIB-TRN-S2-008_Evidence_Collection___Evaluation.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-008-LAB",
+    label: "S2-M008 Lab — Evidence Collection and Evaluation Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-008_Evidence-Collection-and-Evaluation-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-009",
+    label: "S2-M009 Theory — Interviewing & Stakeholder Communication", file: "Section2-Audit-Methodology/TIB-TRN-S2-009_Interviewing___Stakeholder_Communication.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-009-LAB",
+    label: "S2-M009 Lab — Interviewing and Stakeholder Communication Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-009_Interviewing-and-Stakeholder-Communication-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-010",
+    label: "S2-M010 Theory — Control Deficiency Classification", file: "Section2-Audit-Methodology/TIB-TRN-S2-010_Control_Deficiency_Classification.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-010-LAB",
+    label: "S2-M010 Lab — Control Deficiency Classification Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-010_Control-Deficiency-Classification-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-011",
+    label: "S2-M011 Theory — Audit Finding Development CCCE", file: "Section2-Audit-Methodology/TIB-TRN-S2-011_Audit_Finding_Development__CCCE_.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-011-LAB",
+    label: "S2-M011 Lab — CCCE Audit Finding Development Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-011_CCCE-Audit-Finding-Development-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-012",
+    label: "S2-M012 Theory — Management Response & Remediation Tracking", file: "Section2-Audit-Methodology/TIB-TRN-S2-012_Management_Response___Remediation_Tracking.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-012-LAB",
+    label: "S2-M012 Lab — Management Response and Remediation Tracking Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-012_Management-Response-and-Remediation-Tracking-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-013",
+    label: "S2-M013 Theory — Report Writing & Executive Communication", file: "Section2-Audit-Methodology/TIB-TRN-S2-013_Report_Writing___Executive_Communication.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-013-LAB",
+    label: "S2-M013 Lab — Report Writing and Executive Communication Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-013_Report-Writing-and-Executive-Communication-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-014",
+    label: "S2-M014 Theory — Project & Engagement Management", file: "Section2-Audit-Methodology/TIB-TRN-S2-014_Project___Engagement_Management.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-014-LAB",
+    label: "S2-M014 Lab — Engagement Management Fieldwork Programme Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-014_Engagement-Management-Fieldwork-Programme-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-015",
+    label: "S2-M015 Theory — ITGC Testing & Computer Operations", file: "Section2-Audit-Methodology/TIB-TRN-S2-015_ITGC_Testing___Computer_Operations.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-015-LAB",
+    label: "S2-M015 Lab — ITGC Computer Operations Backup Batch Incident Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-015_ITGC-Computer-Operations-Backup-Batch-Incident-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-016",
+    label: "S2-M016 Theory — Third Party & Vendor Risk Assessment", file: "Section2-Audit-Methodology/TIB-TRN-S2-016_Third_Party___Vendor_Risk_Assessment.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-016-LAB",
+    label: "S2-M016 Lab — Third Party Vendor Risk Implementation Partner Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-016_Third-Party-Vendor-Risk-Implementation-Partner-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-017",
+    label: "S2-M017 Theory — Change Management & SDLC Controls Assessment", file: "Section2-Audit-Methodology/TIB-TRN-S2-017_Change_Management___SDLC_Controls_Assessment.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-017-LAB",
+    label: "S2-M017 Lab — Change Management SDLC Transport Controls Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-017_Change-Management-SDLC-Transport-Controls-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-018",
+    label: "S2-M018 Theory — Continuous Monitoring Program Design", file: "Section2-Audit-Methodology/TIB-TRN-S2-018_Continuous_Monitoring_Program_Design.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-018-LAB",
+    label: "S2-M018 Lab — Continuous Monitoring Programme Design Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-018_Continuous-Monitoring-Programme-Design-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-019",
+    label: "S2-M019 Theory — Data Analytics & Population Testing", file: "Section2-Audit-Methodology/TIB-TRN-S2-019_Data_Analytics___Population_Testing.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-019-LAB",
+    label: "S2-M019 Lab — Data Analytics Population Testing Evidence Package Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-019_Data-Analytics-Population-Testing-Evidence-Package-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-020",
+    label: "S2-M020 Theory — Automated Application Controls Testing Methodology", file: "Section2-Audit-Methodology/TIB-TRN-S2-020_Automated_Application_Controls_Testing_Methodology.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-020-LAB",
+    label: "S2-M020 Lab — Automated Controls TOD TOE Testing Methodology Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-020_Automated-Controls-TOD-TOE-Testing-Methodology-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-021",
+    label: "S2-M021 Theory — Enterprise Risk Management Integration", file: "Section2-Audit-Methodology/TIB-TRN-S2-021_Enterprise_Risk_Management_Integration.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-021-LAB",
+    label: "S2-M021 Lab — Enterprise Risk Management ERM Integration Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-021_Enterprise-Risk-Management-ERM-Integration-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-022",
+    label: "S2-M022 Theory — Audit Management Tool Proficiency", file: "Section2-Audit-Methodology/TIB-TRN-S2-022_Audit_Management_Tool_Proficiency.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-022-LAB",
+    label: "S2-M022 Lab — Audit Management Tools AuditBoard Workiva Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-022_Audit-Management-Tools-AuditBoard-Workiva-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-023",
+    label: "S2-M023 Theory — SOX 404 ICFR Full Cycle Assessment", file: "Section2-Audit-Methodology/TIB-TRN-S2-023_SOX_404_ICFR_Full_Cycle_Assessment.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-023-LAB",
+    label: "S2-M023 Lab — SOX 404 ICFR Full Cycle Assessment Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-023_SOX-404-ICFR-Full-Cycle-Assessment-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-024",
+    label: "S2-M024 Theory — Professional Certifications & CISA & CIA & CRISC & CPA", file: "Section2-Audit-Methodology/TIB-TRN-S2-024_Professional_Certifications___CISA___CIA___CRISC___CPA.docx",
+    desc: "Theory guide — audit methodology / professional skills.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-024-LAB",
+    label: "S2-M024 Lab — Professional Certifications CISA Study Plan Case Study", file: "Section2-Audit-Methodology/TIB-TRN-S2-LAB-024_Professional-Certifications-CISA-Study-Plan-Case-Study.docx",
+    desc: "Case-study lab — scenario-based, no SAP system required.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-001a",
+    label: "S2 Deliverable Template 001a — Audit Planning Memorandum APM Engagement Charter Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-001a_Audit-Planning-Memorandum-APM-Engagement-Charter-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-001b",
+    label: "S2 Deliverable Template 001b — Audit Planning Memorandum APM Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-001b_Audit-Planning-Memorandum-APM-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-002a",
+    label: "S2 Deliverable Template 002a — Risk and Control Matrix RCM ITGC Application Controls Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-002a_Risk-and-Control-Matrix-RCM-ITGC-Application-Controls-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-002b",
+    label: "S2 Deliverable Template 002b — Risk and Control Matrix RCM Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-002b_Risk-and-Control-Matrix-RCM-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-003a",
+    label: "S2 Deliverable Template 003a — Test of Design TOD Workpaper Control Design Assessment Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-003a_Test-of-Design-TOD-Workpaper-Control-Design-Assessment-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-003b",
+    label: "S2 Deliverable Template 003b — Test of Design TOD Workpaper Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-003b_Test-of-Design-TOD-Workpaper-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-004a",
+    label: "S2 Deliverable Template 004a — Test of Operating Effectiveness TOE Workpaper Evidence Results Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-004a_Test-of-Operating-Effectiveness-TOE-Workpaper-Evidence-Results-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-004b",
+    label: "S2 Deliverable Template 004b — Test of Operating Effectiveness TOE Workpaper Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-004b_Test-of-Operating-Effectiveness-TOE-Workpaper-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-005a",
+    label: "S2 Deliverable Template 005a — Control Deficiency Register Findings Tracking Classification Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-005a_Control-Deficiency-Register-Findings-Tracking-Classification-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-005b",
+    label: "S2 Deliverable Template 005b — Control Deficiency Register Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-005b_Control-Deficiency-Register-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-006a",
+    label: "S2 Deliverable Template 006a — Remediation Tracking Schedule Post Audit Finding Closure Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-006a_Remediation-Tracking-Schedule-Post-Audit-Finding-Closure-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-006b",
+    label: "S2 Deliverable Template 006b — Remediation Tracking Schedule Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-006b_Remediation-Tracking-Schedule-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-007a",
+    label: "S2 Deliverable Template 007a — Draft Audit Report ITGC Controls Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-007a_Draft-Audit-Report-ITGC-Controls-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-007b",
+    label: "S2 Deliverable Template 007b — Draft Audit Report Shell ITGC Controls Assessment Report Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-007b_Draft-Audit-Report-Shell-ITGC-Controls-Assessment-Report-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-008a",
+    label: "S2 Deliverable Template 008a — Management Letter Advisory Observations Recommendations Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-008a_Management-Letter-Advisory-Observations-Recommendations-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 2 — Audit Methodology (Non-SAP Professional Skills)", code: "S2-DT-008b",
+    label: "S2 Deliverable Template 008b — Management Letter Advisory Observations Template", file: "Section2-Audit-Methodology/TIB-TRN-DT-S2-008b_Management-Letter-Advisory-Observations-Template.docx",
+    desc: "Blank deliverable template — editable workpaper/register/report shell.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-001",
+    label: "S4-M001 Theory — SAP Authorization Concept Mastery", file: "Section4-Security-Skills/TIB-TRN-S4-001_SAP_Authorization_Concept_Mastery.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-001-LAB",
+    label: "S4-M001 Lab — SAP Authorization Concept Mastery Auth Check Trace Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-001_SAP-Authorization-Concept-Mastery-Auth-Check-Trace-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-002",
+    label: "S4-M002 Theory — Role Design Principles", file: "Section4-Security-Skills/TIB-TRN-S4-002_Role_Design_Principles.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-002-LAB",
+    label: "S4-M002 Lab — Role Design Principles Critique and Redesign Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-002_Role-Design-Principles-Critique-and-Redesign-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-003",
+    label: "S4-M003 Theory — SoD Rule Set Knowledge", file: "Section4-Security-Skills/TIB-TRN-S4-003_SoD_Rule_Set_Knowledge.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-003-LAB",
+    label: "S4-M003 Lab — SoD Rule Set Gap Analysis and False Negative Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-003_SoD-Rule-Set-Gap-Analysis-and-False-Negative-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-004",
+    label: "S4-M004 Theory — Identity & Access Management IAM Concepts", file: "Section4-Security-Skills/TIB-TRN-S4-004_Identity___Access_Management_IAM_Concepts.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-004-LAB",
+    label: "S4-M004 Lab — IAM Joiner Mover Leaver Lifecycle Audit Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-004_IAM-Joiner-Mover-Leaver-Lifecycle-Audit-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-005",
+    label: "S4-M005 Theory — Privileged Access Controls", file: "Section4-Security-Skills/TIB-TRN-S4-005_Privileged_Access_Controls.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-005-LAB",
+    label: "S4-M005 Lab — Privileged Access SAP ALL Firefighter Debug Authority Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-005_Privileged-Access-SAP-ALL-Firefighter-Debug-Authority-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-006",
+    label: "S4-M006 Theory — Cryptography & Data Protection Basics", file: "Section4-Security-Skills/TIB-TRN-S4-006_Cryptography___Data_Protection_Basics.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-006-LAB",
+    label: "S4-M006 Lab — Data Protection Encryption Network GDPR Compliance Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-006_Data-Protection-Encryption-Network-GDPR-Compliance-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-007",
+    label: "S4-M007 Theory — Network & Infrastructure Security Awareness", file: "Section4-Security-Skills/TIB-TRN-S4-007_Network___Infrastructure_Security_Awareness.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-007-LAB",
+    label: "S4-M007 Lab — Network Infrastructure Security Architecture Review Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-007_Network-Infrastructure-Security-Architecture-Review-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-008",
+    label: "S4-M008 Theory — Security Patch & Vulnerability Management", file: "Section4-Security-Skills/TIB-TRN-S4-008_Security_Patch___Vulnerability_Management.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-008-LAB",
+    label: "S4-M008 Lab — Security Patch Management SAP Security Notes Compliance Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-008_Security-Patch-Management-SAP-Security-Notes-Compliance-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-009",
+    label: "S4-M009 Theory — Audit Log & SIEM Integration", file: "Section4-Security-Skills/TIB-TRN-S4-009_Audit_Log___SIEM_Integration.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-009-LAB",
+    label: "S4-M009 Lab — Audit Log SAL Configuration and SIEM Integration Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-009_Audit-Log-SAL-Configuration-and-SIEM-Integration-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-010",
+    label: "S4-M010 Theory — Penetration Testing Awareness SAP specific", file: "Section4-Security-Skills/TIB-TRN-S4-010_Penetration_Testing_Awareness_SAP_specific.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-010-LAB",
+    label: "S4-M010 Lab — Penetration Testing Awareness Findings Interpretation Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-010_Penetration-Testing-Awareness-Findings-Interpretation-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-011",
+    label: "S4-M011 Theory — SAP Basis Security Configuration", file: "Section4-Security-Skills/TIB-TRN-S4-011_SAP_Basis_Security_Configuration.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-011-LAB",
+    label: "S4-M011 Lab — Basis Security Configuration Profile Parameters RFC Trust Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-011_Basis-Security-Configuration-Profile-Parameters-RFC-Trust-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-012",
+    label: "S4-M012 Theory — Data Classification & Access Tiering", file: "Section4-Security-Skills/TIB-TRN-S4-012_Data_Classification___Access_Tiering.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-012-LAB",
+    label: "S4-M012 Lab — Data Classification Table Level Access PII Protection Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-012_Data-Classification-Table-Level-Access-PII-Protection-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-013",
+    label: "S4-M013 Theory — Compensating Control Assessment", file: "Section4-Security-Skills/TIB-TRN-S4-013_Compensating_Control_Assessment.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-013-LAB",
+    label: "S4-M013 Lab — Compensating Control Assessment SoD Exception Mitigation Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-013_Compensating-Control-Assessment-SoD-Exception-Mitigation-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-014",
+    label: "S4-M014 Theory — Security Governance & Policy Review", file: "Section4-Security-Skills/TIB-TRN-S4-014_Security_Governance___Policy_Review.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-014-LAB",
+    label: "S4-M014 Lab — Security Governance Policy Assessment Practice Gap Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-014_Security-Governance-Policy-Assessment-Practice-Gap-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-015",
+    label: "S4-M015 Theory — Automated Application Control Design Assessment", file: "Section4-Security-Skills/TIB-TRN-S4-015_Automated_Application_Control_Design_Assessment.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-015-LAB",
+    label: "S4-M015 Lab — Automated Application Controls P2P R2R Design Assessment Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-015_Automated-Application-Controls-P2P-R2R-Design-Assessment-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-016",
+    label: "S4-M016 Theory — IAM IGA Enterprise Tool Awareness", file: "Section4-Security-Skills/TIB-TRN-S4-016_IAM_IGA_Enterprise_Tool_Awareness.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-016-LAB",
+    label: "S4-M016 Lab — IGA Tool SailPoint Integration Certification Quality Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-016_IGA-Tool-SailPoint-Integration-Certification-Quality-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-017",
+    label: "S4-M017 Theory — Cloud Security Controls Assessment", file: "Section4-Security-Skills/TIB-TRN-S4-017_Cloud_Security_Controls_Assessment.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-017-LAB",
+    label: "S4-M017 Lab — Cloud Security RISE SAP Shared Responsibility ITGC Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-017_Cloud-Security-RISE-SAP-Shared-Responsibility-ITGC-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-018",
+    label: "S4-M018 Theory — Regulatory Compliance Multi Jurisdiction Frameworks", file: "Section4-Security-Skills/TIB-TRN-S4-018_Regulatory_Compliance_Multi_Jurisdiction_Frameworks.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-018-LAB",
+    label: "S4-M018 Lab — Regulatory Compliance GDPR PCI DSS SOX Multi Framework Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-018_Regulatory-Compliance-GDPR-PCI-DSS-SOX-Multi-Framework-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-019",
+    label: "S4-M019 Theory — Security Framework Fluency ISO27001 NIST CIS", file: "Section4-Security-Skills/TIB-TRN-S4-019_Security_Framework_Fluency_ISO27001_NIST_CIS.docx",
+    desc: "Theory guide — security skills at audit level.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-019-LAB",
+    label: "S4-M019 Lab — Security Framework Fluency ISO27001 NIST CIS Presentation Lab", file: "Section4-Security-Skills/TIB-TRN-S4-LAB-019_Security-Framework-Fluency-ISO27001-NIST-CIS-Presentation-Lab.docx",
+    desc: "Hands-on security skills lab.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-001a",
+    label: "S4 Deliverable Template 001a — Compensating Control Assessment Workpaper SoD Exception Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-001a_Compensating-Control-Assessment-Workpaper-SoD-Exception-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-001b",
+    label: "S4 Deliverable Template 001b — Compensating Control Assessment Workpaper Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-001b_Compensating-Control-Assessment-Workpaper-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-002a",
+    label: "S4 Deliverable Template 002a — Privileged Access Audit Report SAP ALL Firefighter Debug Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-002a_Privileged-Access-Audit-Report-SAP-ALL-Firefighter-Debug-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-002b",
+    label: "S4 Deliverable Template 002b — Privileged Access Audit Report Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-002b_Privileged-Access-Audit-Report-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-003a",
+    label: "S4 Deliverable Template 003a — Security Governance Gap Assessment Policy Practice Alignment Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-003a_Security-Governance-Gap-Assessment-Policy-Practice-Alignment-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-003b",
+    label: "S4 Deliverable Template 003b — Security Governance Gap Assessment Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-003b_Security-Governance-Gap-Assessment-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-004a",
+    label: "S4 Deliverable Template 004a — Cloud ITGC Scope Document RISE SAP Shared Responsibility Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-004a_Cloud-ITGC-Scope-Document-RISE-SAP-Shared-Responsibility-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Section 4 — Security Skills (Technical Depth at Audit Level)", code: "S4-DT-004b",
+    label: "S4 Deliverable Template 004b — Cloud ITGC Scope Document RISE SAP Template", file: "Section4-Security-Skills/TIB-TRN-DT-S4-004b_Cloud-ITGC-Scope-Document-RISE-SAP-Template.docx",
+    desc: "Blank deliverable template — editable security workpaper.", base: DOC1_BASE },
+{ category: "Study Plans", code: "STUDY-001",
+    label: "30 Day Self Paced Study Master Guide Strategy Pathways Day by Day Instructions", file: "Study-Plans/TIB-TRN-STUDY-001_30-Day-Self-Paced-Study-Master-Guide-Strategy-Pathways-Day-by-Day-Instructions.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Study Plans", code: "STUDY-002",
+    label: "30 Day Daily Tracker Progress Log Gate Tests Weekly Reviews Printable", file: "Study-Plans/TIB-TRN-STUDY-002_30-Day-Daily-Tracker-Progress-Log-Gate-Tests-Weekly-Reviews-Printable.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Study Plans", code: "STUDY-003",
+    label: "30 Day Self Paced Study Guide Read Lab Marking Guide Method", file: "Study-Plans/TIB-TRN-STUDY-003_30-Day-Self-Paced-Study-Guide-Read-Lab-Marking-Guide-Method.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Programme Guides", code: "PROG-001",
+    label: "Programme Overview Guide Learner and Deployer Reference", file: "Programme-Guides/TIB-TRN-PROG-001_Programme-Overview-Guide-Learner-and-Deployer-Reference.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Programme Guides", code: "PROG-002",
+    label: "Facilitator Guide Deployment and Delivery Reference", file: "Programme-Guides/TIB-TRN-PROG-002_Facilitator-Guide-Deployment-and-Delivery-Reference.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "ASSESS-001",
+    label: "Learner Assessment Framework Competency Standards Progression Model", file: "Assessment-and-Capstone/TIB-TRN-ASSESS-001_Learner-Assessment-Framework-Competency-Standards-Progression-Model.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "CAPSTONE-001",
+    label: "Capstone Case Study Meridian Capital Group Full Simulated Engagement", file: "Assessment-and-Capstone/TIB-TRN-CAPSTONE-001_Capstone-Case-Study-Meridian-Capital-Group-Full-Simulated-Engagement.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "CERT-001",
+    label: "CISA Preparation Companion Exam Domain Mapping Study Plan Practice Questions", file: "Assessment-and-Capstone/TIB-TRN-CERT-001_CISA-Preparation-Companion-Exam-Domain-Mapping-Study-Plan-Practice-Questions.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "QB-S1",
+    label: "Section 1 SAP Tasks Question Bank 30 Questions Answer Key", file: "Assessment-and-Capstone/TIB-TRN-QB-S1_Section-1-SAP-Tasks-Question-Bank-30-Questions-Answer-Key.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "QB-S2",
+    label: "Section 2 Audit Methodology Question Bank 30 Questions Answer Key", file: "Assessment-and-Capstone/TIB-TRN-QB-S2_Section-2-Audit-Methodology-Question-Bank-30-Questions-Answer-Key.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Assessment & Capstone", code: "QB-S4",
+    label: "Section 4 Security Skills Question Bank 30 Questions Answer Key", file: "Assessment-and-Capstone/TIB-TRN-QB-S4_Section-4-Security-Skills-Question-Bank-30-Questions-Answer-Key.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Supplementary Modules", code: "SUPP-001",
+    label: "SAP BW Analytics Security Audit Level Assessment Theory", file: "Supplementary/TIB-TRN-SUPP-001_SAP-BW-Analytics-Security-Audit-Level-Assessment-Theory.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Supplementary Modules", code: "SUPP-002",
+    label: "QA File Review Engagement Quality Assurance Theory", file: "Supplementary/TIB-TRN-SUPP-002_QA-File-Review-Engagement-Quality-Assurance-Theory.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+{ category: "Supplementary Modules", code: "SUPP-003",
+    label: "ABAP Code Security Review Audit Level Assessment Theory", file: "Supplementary/TIB-TRN-SUPP-003_ABAP-Code-Security-Review-Audit-Level-Assessment-Theory.docx",
+    desc: "Reference document.", base: DOC1_BASE },
+];
+
+const PROC_NAMES = {'A01': 'Role Design Review', 'A02': 'SoD Conflict Identification', 'A03': 'User Master Record Review', 'A04': 'Auth Object Level Testing', 'A05': 'EAM Firefighter Log Review', 'A06': 'Privileged Access Review', 'A07': 'Role Ownership Recertification', 'A08': 'Provisioning & Deprovisioning', 'A09': 'GRC Configuration Review', 'A10': 'Period End Access Controls', 'C01': 'GRC Connector Configuration', 'C02': 'Ruleset Currency Review', 'C03': 'Risk Analysis Scope', 'C04': 'Workflow Configuration', 'C05': 'MSMP Routing Rules', 'C06': 'BRM Mass Generation', 'C07': 'Access Request Form', 'C08': 'EAM Configuration', 'C09': 'UAR Campaign Configuration', 'C10': 'GRC Reporting', 'D01': 'RFC Destination Inventory', 'D02': 'Trusted RFC Mapping', 'D03': 'RFC User Account Review', 'D04': 'RFC Stored Credentials', 'D05': 'RFC Auth Objects', 'D06': 'Interface Landscape', 'D07': 'IDOC Partner Profile Review', 'D08': 'Middleware Security', 'D09': 'File Interface Controls', 'D10': 'RFC Callback & RFM Review', 'E01': 'OS Level User Access', 'E02': 'Database User Review', 'E03': 'SAP Profile Parameter Review', 'E04': 'Network Topology Review', 'E05': 'SAP Router & Message Server', 'E06': 'ABAP/Java Stack Hardening', 'E07': 'ICM HTTPS Enforcement', 'E08': 'Encryption in Transit', 'E09': 'Encryption at Rest', 'E10': 'Vulnerability Assessment', 'F01': 'Fiori Launchpad Access', 'F02': 'OData Service Exposure', 'F03': 'SICF Service Activation', 'F04': 'FES/BES Alignment', 'F05': 'Web Dispatcher Config', 'F06': 'Fiori Auth Concept', 'F07': 'Mobile Device Controls', 'F08': 'Session Management', 'F09': 'Fiori SoD Exposure', 'F10': 'Custom Fiori App Security', 'G01': 'BTP Global Account Structure', 'G02': 'IAM / IAS/IPS Configuration', 'G03': 'Trust & SAML Configuration', 'G04': 'Role Collection Assignment', 'G05': 'BTP Service Instance Security', 'G06': 'Integration Suite iFlow Security', 'G07': 'Extension Suite App Authorisation', 'G08': 'API Management & OAuth', 'G09': 'BTP Audit Log Service', 'G10': 'BTP Connectivity & Cloud Connector', 'J01': 'Identity Lifecycle Management', 'J02': 'Directory Services Review', 'J03': 'SSO Configuration', 'J04': 'MFA Coverage & Exceptions', 'J05': 'Privileged Identity Management', 'J06': 'Service Account Governance', 'J07': 'Access Recertification Campaigns', 'J08': 'RBAC Framework Alignment', 'J09': 'IAG Tooling Review', 'J10': 'Segregation Across Cloud & On-Prem'};
+
+// Build procedure list for a domain
+function getProcList(domainCode) {
+  const procs = [];
+  for (let i=1; i<=10; i++) {
+    const num = String(i).padStart(2,'0');
+    const code = `${domainCode}${num}`;
+    procs.push({ code, title: PROC_NAMES[code] || code });
+  }
+  return procs;
+}
+
+// Map procedure code (e.g. A01) to exact B2 filename
+function buildFilename(procCode) {
+  const fileMap = {
+    'A01':'KABO-AUD-CTL-001-A01_v3_fnd_merged_Role_Design_Review.docx',
+    'A02':'KABO-AUD-CTL-001-A02_v3_fnd_merged_SoD_Conflict_Identification.docx',
+    'A03':'KABO-AUD-CTL-001-A03_v3_fnd_merged_User_Master_Record_Review.docx',
+    'A04':'KABO-AUD-CTL-001-A04_v3_fnd_merged_Auth_Object_Level_Testing.docx',
+    'A05':'KABO-AUD-CTL-001-A05_v3_fnd_merged_EAM_Firefighter_Log_Review.docx',
+    'A06':'KABO-AUD-CTL-001-A06_v3_fnd_merged_Privileged_Access_Review.docx',
+    'A07':'KABO-AUD-CTL-001-A07_v3_fnd_merged_Role_Ownership_Recertification.docx',
+    'A08':'KABO-AUD-CTL-001-A08_v3_fnd_merged_Provisioning_Deprovisioning.docx',
+    'A09':'KABO-AUD-CTL-001-A09_v3_fnd_merged_GRC_Configuration_Review.docx',
+    'A10':'KABO-AUD-CTL-001-A10_v3_fnd_merged_Period_End_Access_Controls.docx',
+    'C01':'KABO-AUD-CTL-001-C01_v3_fnd_merged_GRC_Connector_Configuration.docx',
+    'C02':'KABO-AUD-CTL-001-C02_v3_fnd_merged_Ruleset_Currency.docx',
+    'C03':'KABO-AUD-CTL-001-C03_v3_fnd_merged_Risk_Analysis_Scope.docx',
+    'C04':'KABO-AUD-CTL-001-C04_v3_fnd_merged_Workflow_Configuration.docx',
+    'C05':'KABO-AUD-CTL-001-C05_v3_fnd_merged_MSMP_Routing_Rules.docx',
+    'C06':'KABO-AUD-CTL-001-C06_v3_fnd_merged_BRM_Mass_Generation.docx',
+    'C07':'KABO-AUD-CTL-001-C07_v3_fnd_merged_Access_Request_Form.docx',
+    'C08':'KABO-AUD-CTL-001-C08_v3_fnd_merged_EAM_Configuration.docx',
+    'C09':'KABO-AUD-CTL-001-C09_v3_fnd_merged_UAR_Campaign_Configuration.docx',
+    'C10':'KABO-AUD-CTL-001-C10_v3_fnd_merged_GRC_Reporting.docx',
+    'D01':'KABO-AUD-CTL-001-D01_v3_fnd_merged_RFC_Destination_Inventory.docx',
+    'D02':'KABO-AUD-CTL-001-D02_v3_fnd_merged_Trusted_RFC_Mapping.docx',
+    'D03':'KABO-AUD-CTL-001-D03_v3_fnd_merged_RFC_User_Account_Review.docx',
+    'D04':'KABO-AUD-CTL-001-D04_v3_fnd_merged_RFC_Stored_Credentials.docx',
+    'D05':'KABO-AUD-CTL-001-D05_v3_fnd_merged_RFC_Auth_Objects.docx',
+    'D06':'KABO-AUD-CTL-001-D06_v3_fnd_merged_Interface_Landscape.docx',
+    'D07':'KABO-AUD-CTL-001-D07_v3_fnd_merged_IDOC_Partner_Profile_Review.docx',
+    'D08':'KABO-AUD-CTL-001-D08_v3_fnd_merged_Middleware_Security.docx',
+    'D09':'KABO-AUD-CTL-001-D09_v3_fnd_merged_File_Interface_Controls.docx',
+    'D10':'KABO-AUD-CTL-001-D10_v3_fnd_merged_RFC_Callback_RFM_Review.docx',
+    'E01':'KABO-AUD-CTL-001-E01_v3_fnd_merged_OS_Level_User_Access.docx',
+    'E02':'KABO-AUD-CTL-001-E02_v3_fnd_merged_Database_User_Review.docx',
+    'E03':'KABO-AUD-CTL-001-E03_v3_fnd_merged_SAP_Profile_Parameter_Review.docx',
+    'E04':'KABO-AUD-CTL-001-E04_v3_fnd_merged_Network_Topology_Review.docx',
+    'E05':'KABO-AUD-CTL-001-E05_v3_fnd_merged_SAP_Router_Message_Server.docx',
+    'E06':'KABO-AUD-CTL-001-E06_v3_fnd_merged_ABAP_Java_Stack_Hardening.docx',
+    'E07':'KABO-AUD-CTL-001-E07_v3_fnd_merged_ICM_HTTPS_Enforcement.docx',
+    'E08':'KABO-AUD-CTL-001-E08_v3_fnd_merged_Encryption_in_Transit.docx',
+    'E09':'KABO-AUD-CTL-001-E09_v3_fnd_merged_Encryption_at_Rest.docx',
+    'E10':'KABO-AUD-CTL-001-E10_v3_fnd_merged_Vulnerability_Assessment.docx',
+    'F01':'KABO-AUD-CTL-001-F01_v3_fnd_merged_Fiori_Launchpad_Access.docx',
+    'F02':'KABO-AUD-CTL-001-F02_v3_fnd_merged_OData_Service_Exposure.docx',
+    'F03':'KABO-AUD-CTL-001-F03_v3_fnd_merged_SICF_Service_Activation.docx',
+    'F04':'KABO-AUD-CTL-001-F04_v3_fnd_merged_FES_BES_Alignment.docx',
+    'F05':'KABO-AUD-CTL-001-F05_v3_fnd_merged_Web_Dispatcher_Config.docx',
+    'F06':'KABO-AUD-CTL-001-F06_v3_fnd_merged_Fiori_Auth_Concept.docx',
+    'F07':'KABO-AUD-CTL-001-F07_v3_fnd_merged_Mobile_Device_Controls.docx',
+    'F08':'KABO-AUD-CTL-001-F08_v3_fnd_merged_Session_Management.docx',
+    'F09':'KABO-AUD-CTL-001-F09_v3_fnd_merged_Fiori_SoD_Exposure.docx',
+    'F10':'KABO-AUD-CTL-001-F10_v3_fnd_merged_Custom_Fiori_App_Security.docx',
+    'G01':'KABO-AUD-CTL-001-G01_v3_fnd_merged_BTP_Global_Account_and_Subaccount_Structure_Review.docx',
+    'G02':'KABO-AUD-CTL-001-G02_v3_fnd_merged_Identity_and_Access_Management_IASIPS_Configuration_Review.docx',
+    'G03':'KABO-AUD-CTL-001-G03_v3_fnd_merged_Trust_Configuration_Corporate_IdP_Federation_and_SAML_Assert.docx',
+    'G04':'KABO-AUD-CTL-001-G04_v3_fnd_merged_Role_Collection_Assignment_BTP_Cockpit_Admin_Developer_Viewe.docx',
+    'G05':'KABO-AUD-CTL-001-G05_v3_fnd_merged_BTP_Service_Instance_Security_Binding_Credentials_and_Secret.docx',
+    'G06':'KABO-AUD-CTL-001-G06_v3_fnd_merged_SAP_Integration_Suite_iFlow_Security_Policies_and_Credential.docx',
+    'G07':'KABO-AUD-CTL-001-G07_v3_fnd_merged_SAP_Extension_Suite_Custom_App_Authorisation_Review.docx',
+    'G08':'KABO-AUD-CTL-001-G08_v3_fnd_merged_API_Management_API_Policies_OAuth_20_and_API_Key_Controls.docx',
+    'G09':'KABO-AUD-CTL-001-G09_v3_fnd_merged_Audit_Log_Service_Configuration_on_BTP.docx',
+    'G10':'KABO-AUD-CTL-001-G10_v3_fnd_merged_BTP_Connectivity_Service_Cloud_Connector_Configuration_and_P.docx',
+    'J01':'KABO-AUD-CTL-001-J01_v3_fnd_merged_Identity_Lifecycle_Management_Joiner_Mover_Leaver_Process_Re.docx',
+    'J02':'KABO-AUD-CTL-001-J02_v3_fnd_merged_Directory_Services_Review_Active_Directory_LDAP_Group_Member.docx',
+    'J03':'KABO-AUD-CTL-001-J03_v3_fnd_merged_Single_SignOn_SSO_Configuration_SAML_20_OAuth_Kerberos.docx',
+    'J04':'KABO-AUD-CTL-001-J04_v3_fnd_merged_MultiFactor_Authentication_MFA_Coverage_Scope_Exceptions.docx',
+    'J05':'KABO-AUD-CTL-001-J05_v3_fnd_merged_Privileged_Identity_Management_PIM_JustinTime_Access_Control.docx',
+    'J06':'KABO-AUD-CTL-001-J06_v3_fnd_merged_Service_Account_Governance_Inventory_Ownership_Password_Rota.docx',
+    'J07':'KABO-AUD-CTL-001-J07_v3_fnd_merged_Access_Recertification_Campaigns_Frequency_Completion_Rate_E.docx',
+    'J08':'KABO-AUD-CTL-001-J08_v3_fnd_merged_RoleBased_Access_Control_RBAC_Framework_Alignment_with_HR_Da.docx',
+    'J09':'KABO-AUD-CTL-001-J09_v3_fnd_merged_IAG_Tooling_Review_SailPoint_Saviynt_CyberArk_If_in_Scope.docx',
+    'J10':'KABO-AUD-CTL-001-J10_v3_fnd_merged_Segregation_of_Access_Across_Cloud_OnPremise_and_Hybrid_Envi.docx',
+  };
+  return fileMap[procCode] || null;
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let _user = null;
+let _email = '';
+let _activeDomain = null;
+let _activeProc = null;
+let _openDomains = new Set();
+
+// ── SESSION GUARD ──────────────────────────────────────────────────────────
+(async function tibSessionGuard() {
+  const TIB_CONSOLE = 'https://tib-student-console.vercel.app';
+  try {
+    // 1 — Token from Student Console URL
+    const urlParams  = new URLSearchParams(window.location.search);
+    const tokenParam   = urlParams.get('tib_token');
+    const refreshParam = urlParams.get('tib_refresh');
+    if (tokenParam && refreshParam) {
+      const decoded        = decodeURIComponent(tokenParam);
+      const decodedRefresh = decodeURIComponent(refreshParam);
+      const { data: { session }, error } = await _supa.auth.setSession({
+        access_token:  decoded,
+        refresh_token: decodedRefresh
+      });
+      if (!error && session) {
+        const clean = window.location.pathname +
+          (urlParams.toString().replace(/[&?]?tib_token=[^&]*/g,'').replace(/[&?]?tib_refresh=[^&]*/g,'').replace(/^&/,'?')||'');
+        window.history.replaceState({},'',clean||window.location.pathname);
+        _user  = session.user;
+        _email = session.user.email;
+        showApp();
+        return;
+      }
+    }
+    // 2 — Existing session
+    const { data: { session }, error } = await _supa.auth.getSession();
+    if (!error && session) {
+      _user  = session.user;
+      _email = session.user.email;
+      showApp();
+      return;
+    }
+    // 3 — No session
+    window.location.href = TIB_CONSOLE;
+  } catch(e) {
+    console.error('[tibSessionGuard]', e.message);
+    window.location.href = TIB_CONSOLE;
+  }
+})();
+
+// ── AUTH FUNCTIONS ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='signin'?0:1)));
+  document.getElementById('tab-signin').classList.toggle('active', tab==='signin');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+}
+
+async function doSignIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  const msg = document.getElementById('si-msg');
+  msg.className = 'login-msg';
+  if (!email||!pass) { msg.className='login-msg error'; msg.textContent='Please enter email and password.'; return; }
+  const { data, error } = await _supa.auth.signInWithPassword({ email, password: pass });
+  if (error) { msg.className='login-msg error'; msg.textContent=error.message; return; }
+  if (email.toLowerCase() === SUPER_ADMIN) {
+    _user = data.user; _email = email;
+    showApp();
+    return;
+  }
+  // Check enrollment
+  const { data: enroll } = await _supa.from('enrollments')
+    .select('is_active,expiry_date')
+    .eq('user_id', data.user.id)
+    .eq('course', COURSE)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!enroll) {
+    await _supa.auth.signOut();
+    msg.className='login-msg error';
+    msg.textContent='No active SCC enrolment found. Please contact admin@tib-systems.com';
+    return;
+  }
+  if (enroll.expiry_date && new Date(enroll.expiry_date) < new Date()) {
+    await _supa.auth.signOut();
+    msg.className='login-msg error'; msg.textContent='Your access has expired. Please contact admin@tib-systems.com'; return;
+  }
+  _user = data.user; _email = email;
+  showApp();
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const msg = document.getElementById('reg-msg');
+  msg.className = 'login-msg';
+  if (!name||!email||!pass) { msg.className='login-msg error'; msg.textContent='All fields required.'; return; }
+  if (pass.length < 8) { msg.className='login-msg error'; msg.textContent='Password must be at least 8 characters.'; return; }
+  const { data, error } = await _supa.auth.signUp({
+    email, password: pass,
+    options: { data:{ full_name:name }, emailRedirectTo: LMS_URL }
+  });
+  if (error) { msg.className='login-msg error'; msg.textContent=error.message; return; }
+  msg.className='login-msg success';
+  msg.textContent='Account created! Check your email to confirm, then sign in. If you purchased through our website, your access will be activated within a few minutes.';
+}
+
+async function doSignOut() {
+  await _supa.auth.signOut();
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('si-email').value = '';
+  document.getElementById('si-pass').value = '';
+  document.getElementById('si-msg').className = 'login-msg';
+  document.getElementById('si-msg').textContent = '';
+}
+
+// ── SHOW APP ───────────────────────────────────────────────────────────────
+function showApp() {
+  document.body.style.visibility='visible';
+  document.getElementById('login-screen').style.display = 'none';
+  const app = document.getElementById('main-app');
+  app.style.display = 'flex';
+  document.getElementById('topbar-user').textContent = _email;
+  document.getElementById('watermark-bar').textContent = `TIB SYSTEMS — LICENSED TO: ${_email.toUpperCase()} — UNAUTHORISED DISTRIBUTION PROHIBITED`;
+  buildSidebar();
+  if(location.hash==='#resources-section1'){
+    history.replaceState(null,'',location.pathname+location.search);
+    showResources('Section 1 — SAP Tasks (In-System Audit, Application Controls, Security)');
+  }else{
+    showWelcome();
+  }
+}
+
+// ── SIDEBAR ────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const dl = document.getElementById('domain-list');
+  dl.innerHTML = '';
+  DOMAINS.forEach(dom => {
+    const di = document.createElement('div');
+    di.className = 'domain-item';
+    di.id = `dom-${dom.code}`;
+    di.innerHTML = `<div class="domain-code">Domain ${dom.code}</div><div class="domain-name">${dom.name}</div><div class="domain-count">${dom.procs} procedures</div>`;
+    di.onclick = () => toggleDomain(dom.code);
+    dl.appendChild(di);
+    const pl = document.createElement('div');
+    pl.className = 'proc-list';
+    pl.id = `procs-${dom.code}`;
+    getProcList(dom.code).forEach(proc => {
+      const pi = document.createElement('div');
+      pi.className = 'proc-item';
+      pi.id = `proc-${proc.code}`;
+      const display = proc.code.slice(0,1) + '-' + proc.code.slice(1);
+      const name = proc.title ? ` — ${proc.title}` : '';
+      pi.textContent = display + name;
+      pi.onclick = () => loadProcedure(dom.code, proc.code);
+      pl.appendChild(pi);
+    });
+    dl.appendChild(pl);
+  });
+
+  const rl = document.getElementById('resource-links');
+  RESOURCES.forEach((r,i) => {
+    const ri = document.createElement('div');
+    ri.className = 'resource-item';
+    ri.textContent = r.label;
+    ri.onclick = () => showResourceDetail(i);
+    rl.appendChild(ri);
+  });
+}
+
+function toggleDomain(code) {
+  const domEl = document.getElementById(`dom-${code}`);
+  const procEl = document.getElementById(`procs-${code}`);
+  const isOpen = _openDomains.has(code);
+  // Close all
+  _openDomains.forEach(c => {
+    document.getElementById(`dom-${c}`)?.classList.remove('active');
+    document.getElementById(`procs-${c}`)?.classList.remove('open');
+  });
+  _openDomains.clear();
+  if (!isOpen) {
+    _openDomains.add(code);
+    domEl.classList.add('active');
+    procEl.classList.add('open');
+  }
+  closeSidebar();
+}
+
+// ── MOBILE SIDEBAR ─────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+// ── WELCOME SCREEN ─────────────────────────────────────────────────────────
+function showWelcome() {
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="welcome-card">
+      <h2>Welcome to the TIB SCC Programme</h2>
+      <p>You are enrolled in the <strong>Senior Controls Consultant (SCC) Programme</strong> — 7 SAP audit domains, 70 procedures, Big 4-calibrated standards.</p>
+      <p>Select a domain from the left sidebar to begin, or use the Resource Library to access your course materials.</p>
+      <div style="background:#EEF3FA;border:1px solid #1F7A8C;border-left:4px solid #1F7A8C;border-radius:6px;padding:14px 18px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#1F3864">&#128214; New here, or just want a refresher?</div>
+          <div style="font-size:12px;color:#555;margin-top:2px">The Trainee User Guide walks through how procedures, the risk gate, and the Resource Library all work together.</div>
+        </div>
+        <button onclick="showUserGuide()" style="background:#1F7A8C;color:#fff;border:none;padding:9px 18px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Open User Guide</button>
+      </div>
+      <div class="pathway-grid">
+        ${DOMAINS.map(d=>`
+          <div class="pathway-card" onclick="toggleDomain('${d.code}')">
+            <div class="pc-code">Domain ${d.code}</div>
+            <div class="pc-name">${d.name}</div>
+            <div class="pc-count">${d.procs} procedures</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function showUserGuide() {
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="resource-card" style="max-width:780px">
+      <h2>&#128214; Trainee User Guide</h2>
+      <p>Everything you need to navigate the SCC Programme &#8212; how procedures work, how the Resource Library is organised, and how to get the most out of both.</p>
+
+      <details open style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">1. Two Parts of Your Programme</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">Your programme has two halves that work together. The <strong>domain sidebar</strong> on the left holds all 7 SAP audit domains and 70 procedures &#8212; this is the hands-on, step-by-step audit content. The <strong>Resource Library</strong> holds 186 supporting documents &#8212; theory guides, lab exercises, templates, study plans, and reference material. Procedures teach you what to do; the Resource Library teaches you why, and gives you the templates to do it with.</p>
+      </details>
+
+      <details style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">2. Working Through a Procedure</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">Click a domain in the sidebar to expand its procedure list, then click a procedure to open it. Each one starts with a short risk prompt &#8212; write a 1&#8211;2 sentence answer in your own words describing the audit risk, then submit. This unlocks the full procedure content below it. Read it, then complete the knowledge check at the end. Your pass is recorded automatically and your progress is saved as you go &#8212; you can leave and come back to any procedure at any time.</p>
+      </details>
+
+      <details style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">3. Using the Resource Library</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">Click any item to open it right in your browser &#8212; nothing downloads to your device, and every document carries a watermark with your account email. The library is organised into eight categories:</p>
+        <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px">
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864;width:200px">Field Playbooks & Companions</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">Your SCC 30-day field playbook, plus the Episode Study Pack of annotated screenshots.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Section 1 &#8212; SAP Tasks</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">Theory and lab guide pairs for in-system audit, application controls, and security &#8212; 26 modules.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Section 2 &#8212; Audit Methodology</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">Non-SAP professional audit skills &#8212; planning, sampling, reporting &#8212; plus matching case studies and blank deliverable templates.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Section 4 &#8212; Security Skills</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">Technical security depth at audit level &#8212; authorization concepts, IAM, cryptography &#8212; with hands-on labs.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Study Plans</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">A 30-day self-paced study schedule, a printable daily tracker, and a guide to the read/lab/marking method.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Programme Guides</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">An overview guide and a facilitator/delivery reference.</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;font-weight:700;color:#1F3864">Assessment & Capstone</td><td style="padding:6px 8px;border-bottom:1px solid #e0e6ef;color:#555">Question banks per section, the capstone case study, and a CISA exam-prep companion.</td></tr>
+          <tr><td style="padding:6px 8px;font-weight:700;color:#1F3864">Supplementary Modules</td><td style="padding:6px 8px;color:#555">Specialist topics: SAP BW Analytics, ABAP code security review, and QA file review.</td></tr>
+        </table>
+      </details>
+
+      <details style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">4. Recommended Study Approach</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">For each domain, read through Section 1 theory before you start the procedures &#8212; it gives you the concept and market context the procedure assumes you already have. Every procedure page has a <strong>"Read the Section 1 theory first"</strong> button near the top &#8212; it opens the Resource Library in a new tab with the Section 1 category already expanded, so your procedure stays open in the original tab while you find the matching module.</p>
+      </details>
+
+      <details style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">5. Navigating the Platform</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">The home icon in the top bar always brings you back to this welcome screen. On a phone or narrow window, use the hamburger menu to open the sidebar, and it will close automatically once you make a selection. Use Sign Out when you're done, especially on a shared device.</p>
+      </details>
+
+      <details style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:800;color:#1F3864;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">6. Licensing & Use</summary>
+        <p style="font-size:13px;color:#444;line-height:1.7">Every page you view is licensed to your account and carries your email as a faint watermark. This content is for your personal study only &#8212; please don't share your login, screenshot or redistribute documents, or attempt to download material the platform doesn't offer as a download. If you run into a technical issue, contact your programme administrator.</p>
+      </details>
+
+      <button onclick="showWelcome()" style="background:none;border:1px solid #1F7A8C;color:#1F7A8C;padding:8px 16px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px">&larr; Back to Home</button>
+    </div>`;
+  closeSidebar();
+}
+
+// ── LOAD PROCEDURE ─────────────────────────────────────────────────────────
+async function loadProcedure(domainCode, procCode) {
+  // Clear active states
+  document.querySelectorAll('.proc-item').forEach(el=>el.classList.remove('active'));
+  const procEl = document.getElementById(`proc-${procCode}`);
+  if (procEl) procEl.classList.add('active');
+  _activeProc = procCode;
+  closeSidebar();
+
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="proc-header">
+      <h2>${procCode.slice(0,1)+'-'+procCode.slice(1)} &mdash; ${PROC_NAMES[procCode]||procCode}</h2>
+      <div class="proc-meta">Domain ${domainCode} — ${DOMAINS.find(d=>d.code===domainCode)?.name||''}</div>
+      <a href="#resources-section1" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:12px;font-weight:700;color:#1F7A8C;text-decoration:none;border:1px solid #1F7A8C;padding:6px 14px;border-radius:5px">&#128214; Read the Section 1 theory first &#8599;</a>
+    </div>
+    <div class="proc-content-box">
+      <div class="loading-spinner"><div class="spinner"></div><div>Loading procedure document...</div></div>
+    </div>`;
+
+  // Fetch DOCX from B2
+  const fileName = buildFilename(procCode);
+  if (!fileName) {
+    ci.querySelector('.proc-content-box').innerHTML = `<div class="error-box"><strong>Filename not found for procedure ${procCode}.</strong></div>`;
+    return;
+  }
+  const url = `${B2_BASE}/${fileName}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const arrayBuf = await resp.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuf });
+    ci.querySelector('.proc-content-box').innerHTML = `<div class="proc-doc-render">${result.value}</div>`;
+    addWatermarkOverlay(ci.querySelector('.proc-doc-render'));
+  } catch(e) {
+    ci.querySelector('.proc-content-box').innerHTML = `
+      <div class="error-box">
+        <strong>Unable to load procedure document.</strong><br>
+        File: ${fileName}<br>
+        Please ensure the document has been uploaded to Backblaze B2 (scc-cl-docs/${fileName}).<br>
+        Error: ${e.message}
+      </div>`;
+  }
+}
+
+function addWatermarkOverlay(el) {
+  const wm = document.createElement('div');
+  wm.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:14px;color:rgba(31,56,100,0.06);font-weight:900;letter-spacing:2px;pointer-events:none;white-space:nowrap;z-index:0';
+  wm.textContent = `TIB SYSTEMS — ${_email}`;
+  el.style.position = 'relative';
+  el.appendChild(wm);
+}
+
+// ── RESOURCES ──────────────────────────────────────────────────────────────
+function showResources(focusCategory) {
+  const ci = document.getElementById('content-inner');
+  const categories=[];
+  const byCategory={};
+  RESOURCES.forEach((r,i)=>{
+    if(!byCategory[r.category]){byCategory[r.category]=[];categories.push(r.category);}
+    byCategory[r.category].push(i);
+  });
+  const sectionsHtml=categories.map((cat,catIdx)=>{
+    const indices=byCategory[cat];
+    const isOpen=focusCategory?(cat===focusCategory):(catIdx===0);
+    const itemsHtml=indices.map(i=>{
+      const r=RESOURCES[i];
+      return `<div style="border:1px solid #e0e6ef;border-radius:6px;padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="showResourceDetail(${i})">
+        <div style="font-size:14px;font-weight:700;color:#1F3864;margin-bottom:4px">${r.label}</div>
+        <div style="font-size:12px;color:#555">${r.desc}</div>
+      </div>`;
+    }).join('');
+    return `<details id="cat-${catIdx}" style="margin-bottom:16px" ${isOpen?'open':''}>
+      <summary style="cursor:pointer;font-size:13px;font-weight:800;color:#C65911;text-transform:uppercase;letter-spacing:.5px;padding:10px 0;border-bottom:2px solid #e0e6ef;margin-bottom:10px">${cat} (${indices.length})</summary>
+      ${itemsHtml}
+    </details>`;
+  }).join('');
+  ci.innerHTML = `
+    <div class="resource-card">
+      <h2>&#128194; Resource Library</h2>
+      <p>Your course materials are available below. These documents are licensed exclusively to your account — do not share or distribute. Click any item to view it inline.</p>
+      ${sectionsHtml}
+    </div>`;
+  closeSidebar();
+  if(focusCategory){
+    const idx=categories.indexOf(focusCategory);
+    setTimeout(()=>{
+      const el=document.getElementById(`cat-${idx}`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },50);
+  }
+}
+
+function showResourceDetail(idx) {
+  const r = RESOURCES[idx];
+  const ci = document.getElementById('content-inner');
+  ci.innerHTML = `
+    <div class="resource-card">
+      <h2>${r.label}</h2>
+      <p>${r.desc}</p>
+      <p style="font-size:12px;color:#888;margin-bottom:16px">&#9888; This document is watermarked to your account: ${_email}. Redistribution is prohibited under your licence agreement.</p>
+      <div class="loading-spinner"><div class="spinner"></div><div>Loading document...</div></div>
+    </div>`;
+  const url = `${r.base}/${r.file}`;
+  fetch(url).then(resp => {
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.arrayBuffer();
+  }).then(buf => mammoth.convertToHtml({ arrayBuffer: buf }))
+    .then(result => {
+      ci.querySelector('.resource-card').innerHTML = `
+        <button onclick="showResources()" style="background:none;border:1px solid #1F7A8C;color:#1F7A8C;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:16px">&larr; Back to Resource Library</button>
+        <h2>${r.label}</h2>
+        <p style="font-size:12px;color:#C65911;margin-bottom:16px;font-weight:700">LICENSED TO: ${_email.toUpperCase()}</p>
+        <div class="proc-doc-render">${result.value}</div>`;
+      addWatermarkOverlay(ci.querySelector('.proc-doc-render'));
+    })
+    .catch(e => {
+      ci.querySelector('.resource-card').innerHTML = `
+        <h2>${r.label}</h2>
+        <div class="error-box">Document not yet available at ${url}.<br>Error: ${e.message}</div>`;
+    });
+  closeSidebar();
+}
+
+// ── IP PROTECTION ──────────────────────────────────────────────────────────
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key==='F12'||(e.ctrlKey&&['u','U','s','S','c','C','p','P'].includes(e.key))) e.preventDefault();
+});
+</script>
+</body>
+</html>
